@@ -1,0 +1,30 @@
+{
+  "name": "milliy-taomlar",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p ${PORT:-3000}",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "14.2.35",
+    "pg": "8.13.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "server-only": "0.0.1",
+    "sharp": "0.33.5",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.6",
+    "@types/pg": "8.11.10",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "typescript": "5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
