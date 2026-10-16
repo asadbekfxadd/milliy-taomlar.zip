@@ -421,3 +421,14 @@ footer{position:relative;border-top:1px solid var(--line);overflow:hidden}
   .rv.pre{opacity:1;transform:none}
   .ph canvas,.ph img{opacity:1;filter:none}
 }
+
+/* hero with a real photo: arch frame (the pointed arch of Samarkand portals), not a circle crop */
+.plate.photo{width:min(620px,44vw);aspect-ratio:4/5;margin-right:0;justify-self:end}
+.plate.photo img{border-radius:999px 999px 18px 18px;box-shadow:0 40px 80px -30px rgba(0,0,0,.8);outline:1px solid rgba(227,164,62,.35);outline-offset:10px}
+.plate.photo .plate-tag{left:-24%;bottom:10%}
+@media (max-width:1020px){.plate.photo{width:min(86vw,460px);margin:8px auto 28px;justify-self:center}}
+/* photo cards: same frame everywhere so photos and drawings read as one set */
+.ph img{background:var(--char-2)}
+.obj .ph.r4 img,.obj .ph.wide img,.lead .ph img{border-radius:6px}
+.credit{font-size:11px;color:var(--dim)}
+.credit a{color:var(--dim)}

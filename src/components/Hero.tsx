@@ -119,7 +119,7 @@ export default function Hero({ s, dish }: { s: Settings; dish?: Dish }) {
             </button>
           </div>
         </div>
-        <div className="plate" ref={plate}>
+        <div className={`plate ${dish?.photo ? 'photo' : ''}`} ref={plate}>
           {dish?.photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoSrc(dish.photo)} alt={dish.ru} fetchPriority="high" />

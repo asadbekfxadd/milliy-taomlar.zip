@@ -38,14 +38,14 @@ export default async function ContactsPage() {
                   </a>
                 </div>
               </>
-            ) : (
+            ) : ed ? (
               <>
                 <div className="big-phone" style={{ color: 'var(--dim)' }}>
                   Телефон
                 </div>
                 {miss('Номер не указан')}
               </>
-            )}
+            ) : null}
             <dl className="kv" style={{ marginTop: 36 }}>
               <dt>Адрес</dt>
               <dd>{s.address ? addr : <>{s.city} {miss('точный адрес')}</>}</dd>

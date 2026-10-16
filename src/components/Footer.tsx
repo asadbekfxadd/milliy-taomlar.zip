@@ -14,11 +14,13 @@ export default function Footer({ s }: { s: Settings }) {
         <div className="in">
           <div className="slogan">{s.tagline}</div>
           <div className="fcols">
-            <div>
-              <h5>Где нас найти</h5>
-              <p>{addr || '—'}</p>
-              {s.hours && <p style={{ marginTop: 6 }}>{s.hours}</p>}
-            </div>
+            {(addr || s.hours) && (
+              <div>
+                <h5>Где нас найти</h5>
+                {addr && <p>{addr}</p>}
+                {s.hours && <p style={{ marginTop: 6 }}>{s.hours}</p>}
+              </div>
+            )}
             <div>
               <h5>Заказы</h5>
               <p>
@@ -33,6 +35,7 @@ export default function Footer({ s }: { s: Settings }) {
                 {[s.pickup && 'Самовывоз', s.delivery && 'Доставка'].filter(Boolean).join(' · ') || 'Ждём в зале'}
               </p>
             </div>
+            {(s.instagram || s.telegram) && (
             <div>
               <h5>Соцсети</h5>
               <p>
@@ -49,9 +52,9 @@ export default function Footer({ s }: { s: Settings }) {
                     Telegram {s.telegram}
                   </a>
                 )}
-                {!s.instagram && !s.telegram && '—'}
               </p>
             </div>
+            )}
             <div>
               <h5>Разделы</h5>
               <p>
@@ -67,7 +70,11 @@ export default function Footer({ s }: { s: Settings }) {
             <span>
               © {new Date().getFullYear()} {s.name}
             </span>
-            <span>Цены указаны в сумах</span>
+            <span className="credit">
+              Цены в сумах · Фото блюд:{' '}
+              <a href="https://unsplash.com/@arrogant_7007" target="_blank" rel="noopener">otabek xatipov</a>,{' '}
+              <a href="https://unsplash.com/@alonady" target="_blank" rel="noopener">Alona D</a> / Unsplash
+            </span>
           </div>
         </div>
       </div>

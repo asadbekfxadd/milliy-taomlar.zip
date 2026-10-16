@@ -1,7 +1,9 @@
 import type { Cat, Dish, Settings } from './types';
 
 /* Default content. The site shows it until the owner saves menu/settings in /admin.
-   Prices, zones and fees are EXAMPLES — replace them before launch. */
+   Prices, zones and fees are EXAMPLES — replace them before launch.
+   Photos: free images from Unsplash (Unsplash License, commercial use allowed) — plov, lagman and
+   meat dish by otabek xatipov (Tashkent), shashlik by Alona D. Replace with the restaurant's own shots. */
 export const DEFAULT_CATS: Cat[]=[
  {id:'osh',name:'Ош ва палов',ru:'Плов'},
  {id:'milliy',name:'Миллий таомлар',ru:'Национальные блюда'},
@@ -13,14 +15,14 @@ export const DEFAULT_CATS: Cat[]=[
  {id:'desert',name:'Десертлар',ru:'Десерты'}];
 export const D=(o: Partial<Dish> & {id:string}): Dish=>Object.assign({cat:'',name:'',ru:'',desc:'',weight:'',price:0,art:'plov',ingr:[],allergens:[],tags:[],sizes:[],extras:[],photo:'',available:true,featured:false},o) as Dish;
 export const DEFAULT_DISHES: Dish[]=[
- D({id:'d1',cat:'osh',name:"To'y oshi",ru:'Свадебный плов',desc:'Рассыпчатая девзира, томлёная баранина, жёлтая морковь, нут и изюм. Сверху перепелиное яйцо, как на свадебном дастархане.',ingr:['рис девзира','баранина','морковь жёлтая и красная','нут','изюм','лук','чеснок','зира','барбарис','хлопковое масло'],allergens:['яйцо'],weight:'350 г',price:45000,tags:['chef','trad'],art:'plov',featured:true,
+ D({id:'d1',photo:'https://images.unsplash.com/photo-1671048116810-6f885b2b35a5?auto=format&fit=crop&w=1600&q=80',cat:'osh',name:"To'y oshi",ru:'Свадебный плов',desc:'Рассыпчатая девзира, томлёная баранина, жёлтая морковь, нут и изюм. Сверху перепелиное яйцо, как на свадебном дастархане.',ingr:['рис девзира','баранина','морковь жёлтая и красная','нут','изюм','лук','чеснок','зира','барбарис','хлопковое масло'],allergens:['яйцо'],weight:'350 г',price:45000,tags:['chef','trad'],art:'plov',featured:true,
    sizes:[{label:'Порция',w:'350 г',p:45000},{label:'Большая порция',w:'500 г',p:62000},{label:'Казан на 10 гостей',w:'около 4 кг',p:420000}],
    extras:[{label:'Ачик-чучук',p:15000},{label:'Казы, нарезка',p:22000},{label:'Перепелиные яйца ×2',p:5000}]}),
- D({id:'d2',cat:'osh',name:'Choyxona oshi',ru:'Чайханский плов',desc:'Плов в духе ташкентской чайханы: ази из конины, целая головка чеснока, много зиры.',ingr:['рис девзира','конина','морковь','чеснок','зира','хлопковое масло'],weight:'350 г',price:48000,tags:['hit'],art:'plov',
+ D({id:'d2',photo:'https://images.unsplash.com/photo-1671048117293-6b2d4000d146?auto=format&fit=crop&w=1600&q=80',cat:'osh',name:'Choyxona oshi',ru:'Чайханский плов',desc:'Плов в духе ташкентской чайханы: ази из конины, целая головка чеснока, много зиры.',ingr:['рис девзира','конина','морковь','чеснок','зира','хлопковое масло'],weight:'350 г',price:48000,tags:['hit'],art:'plov',
    sizes:[{label:'Порция',w:'350 г',p:48000},{label:'Большая порция',w:'500 г',p:66000}],extras:[{label:'Казы, нарезка',p:22000},{label:'Ачик-чучук',p:15000}]}),
- D({id:'d3',cat:'osh',name:'Samarqand oshi',ru:'Самаркандский плов',desc:'Слоями и без перемешивания: рис отдельно, морковь отдельно, мясо крупными кусками сверху.',ingr:['рис','баранина','жёлтая морковь','курдюк','зира'],weight:'350 г',price:50000,tags:['trad'],art:'plov'}),
- D({id:'d4',cat:'milliy',name:'Qozon kabob',ru:'Казан-кабоб',desc:'Рёбра ягнёнка и молодой картофель, обжаренные в курдюке до хрустящей корочки. Сверху лук и зелень.',ingr:['рёбра ягнёнка','картофель','курдюк','лук','зира','зелень'],weight:'450 г',price:65000,tags:['hit'],art:'kazan',featured:true}),
- D({id:'d5',cat:'milliy',name:"Lag'mon",ru:'Лагман',desc:'Лапша ручной тяги и густая подлива из говядины, перца, редьки и чеснока на ярком бульоне.',ingr:['лапша ручной тяги','говядина','перец болгарский','редька','чеснок','томат'],allergens:['глютен'],weight:'450 мл',price:35000,tags:['trad'],art:'lagmon',featured:true,
+ D({id:'d3',photo:'https://images.unsplash.com/photo-1671048116858-e8ef69175b2d?auto=format&fit=crop&w=1600&q=80',cat:'osh',name:'Samarqand oshi',ru:'Самаркандский плов',desc:'Слоями и без перемешивания: рис отдельно, морковь отдельно, мясо крупными кусками сверху.',ingr:['рис','баранина','жёлтая морковь','курдюк','зира'],weight:'350 г',price:50000,tags:['trad'],art:'plov'}),
+ D({id:'d4',photo:'https://images.unsplash.com/photo-1671048116414-67585c932b8f?auto=format&fit=crop&w=1600&q=80',cat:'milliy',name:'Qozon kabob',ru:'Казан-кабоб',desc:'Рёбра ягнёнка и молодой картофель, обжаренные в курдюке до хрустящей корочки. Сверху лук и зелень.',ingr:['рёбра ягнёнка','картофель','курдюк','лук','зира','зелень'],weight:'450 г',price:65000,tags:['hit'],art:'kazan',featured:true}),
+ D({id:'d5',photo:'https://images.unsplash.com/photo-1671048116404-454fefede763?auto=format&fit=crop&w=1600&q=80',cat:'milliy',name:"Lag'mon",ru:'Лагман',desc:'Лапша ручной тяги и густая подлива из говядины, перца, редьки и чеснока на ярком бульоне.',ingr:['лапша ручной тяги','говядина','перец болгарский','редька','чеснок','томат'],allergens:['глютен'],weight:'450 мл',price:35000,tags:['trad'],art:'lagmon',featured:true,
    sizes:[{label:'Суйру (с бульоном)',w:'450 мл',p:35000},{label:'Куруқ (жареный)',w:'400 г',p:38000}],extras:[{label:'Острый соус',p:3000},{label:'Двойная лапша',p:8000}]}),
  D({id:'d6',cat:'milliy',name:'Dimlama',ru:'Димлама',desc:'Говядина, айва, капуста и баклажан, томлённые в собственном соку под крышкой.',ingr:['говядина','айва','капуста','баклажан','картофель','лук'],weight:'400 г',price:42000,tags:['trad'],art:'shurva'}),
  D({id:'d7',cat:'xamir',name:'Tandir somsa',ru:'Самса из тандыра',desc:'Слоёное тесто, рубленая вручную баранина и кусочек курдюка. Корочка, которая хрустит громче разговора за столом.',ingr:['слоёное тесто','баранина','курдюк','лук','зира','кунжут'],allergens:['глютен','кунжут'],weight:'около 220 г',price:10000,tags:['hit','trad'],art:'somsa',featured:true,
@@ -29,7 +31,7 @@ export const DEFAULT_DISHES: Dish[]=[
    sizes:[{label:'5 шт',w:'около 450 г',p:42000},{label:'10 шт',w:'около 900 г',p:80000}],extras:[{label:'Каймак',p:6000},{label:'Катык с зеленью',p:4000}]}),
  D({id:'d9',cat:'xamir',name:'Patir non',ru:'Патир',desc:'Лепёшка на молоке и сливочном масле, с чернушкой и кунжутом.',ingr:['мука','молоко','сливочное масло','чернушка','кунжут'],allergens:['глютен','молоко','кунжут'],weight:'1 шт',price:8000,art:'non'}),
  D({id:'d10',cat:'xamir',name:'Obi non',ru:'Тандырная лепёшка',desc:'Классическая лепёшка прямо со стенки тандыра.',ingr:['мука','вода','дрожжи','кунжут'],allergens:['глютен','кунжут'],weight:'1 шт',price:5000,art:'non'}),
- D({id:'d11',cat:'grill',name:"Qo'y kabob",ru:'Шашлык из баранины',desc:'Корейка в маринаде из лука и зиры, жаренная на углях. Подаётся с маринованным луком и сумахом.',ingr:['баранья корейка','лук','зира','сумах'],weight:'1 шампур',price:24000,tags:['chef'],art:'shashlik',featured:true,
+ D({id:'d11',photo:'https://images.unsplash.com/photo-1747253255646-3bffa4565a7a?auto=format&fit=crop&w=1600&q=80',cat:'grill',name:"Qo'y kabob",ru:'Шашлык из баранины',desc:'Корейка в маринаде из лука и зиры, жаренная на углях. Подаётся с маринованным луком и сумахом.',ingr:['баранья корейка','лук','зира','сумах'],weight:'1 шампур',price:24000,tags:['chef'],art:'shashlik',featured:true,
    sizes:[{label:'1 шампур',w:'около 180 г',p:24000},{label:'5 шампуров',w:'около 900 г',p:115000}],extras:[{label:'Лепёшка',p:5000},{label:'Ачик-чучук',p:15000}]}),
  D({id:'d12',cat:'grill',name:'Jigar kabob',ru:'Печень в курдюке',desc:'Ягнячья печень, обёрнутая курдюком, на углях.',ingr:['печень ягнёнка','курдюк','соль','перец'],weight:'1 шампур',price:16000,art:'shashlik'}),
  D({id:'d13',cat:'grill',name:'Lula kabob',ru:'Люля-кебаб',desc:'Рубленая вручную баранина с курдюком и чёрным перцем.',ingr:['баранина','курдюк','лук','перец'],weight:'1 шампур',price:20000,art:'shashlik'}),
