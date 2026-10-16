@@ -584,6 +584,9 @@ function SettingsTab({ s, edit, toast, menuCats }: { s: Settings; edit: (fn: (s:
             <button type="button" className={`chk ${s.autoAcceptOnline ? 'on' : ''}`} onClick={() => edit((x) => (x.autoAcceptOnline = !x.autoAcceptOnline))}>
               {s.autoAcceptOnline ? 'Сразу на кухню и в печать' : 'Сначала принимает кассир'}
             </button>
+            <button type="button" className={`chk ${s.printGuestChecks ? 'on' : ''}`} onClick={() => edit((x) => (x.printGuestChecks = !x.printGuestChecks))}>
+              {s.printGuestChecks ? 'Печатать пречек и чек гостю' : 'Только бегунки на кухню'}
+            </button>
           </div>
         </div>
         <div className="fld" style={{ gridColumn: '1/-1' }}>

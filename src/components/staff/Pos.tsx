@@ -214,13 +214,15 @@ export default function Pos() {
 
             {!closed && (
               <>
-                <div className="pos-actions">
+                <div className={`pos-actions ${settings.printGuestChecks ? '' : 'two'}`}>
                   <button className="sx-btn primary" disabled={!unsent || busy} onClick={() => run({ action: cur.status === 'new' ? 'accept' : 'send' }, 'Отправлено на кухню, бегунки печатаются')}>
                     {cur.status === 'new' ? 'Принять и на кухню' : `На кухню${unsent ? ` (${unsent})` : ''}`}
                   </button>
-                  <button className="sx-btn" disabled={!cur.items.length || busy} onClick={() => run({ action: 'precheck' }, 'Пречек отправлен на печать')}>
-                    Пречек
-                  </button>
+                  {settings.printGuestChecks && (
+                    <button className="sx-btn" disabled={!cur.items.length || busy} onClick={() => run({ action: 'precheck' }, 'Пречек отправлен на печать')}>
+                      Пречек
+                    </button>
+                  )}
                   <button className="sx-btn ok" disabled={!cur.items.length || unsent > 0 || busy} onClick={() => setPaying(true)}>
                     Оплата
                   </button>
@@ -275,7 +277,7 @@ export default function Pos() {
                 </div>
               </>
             )}
-            {closed && (
+            {closed && settings.printGuestChecks && (
               <div className="pos-actions">
                 <button className="sx-btn" onClick={() => run({ action: 'reprint' }, 'Чек отправлен на печать')}>
                   Напечатать чек ещё раз
@@ -292,7 +294,7 @@ export default function Pos() {
           o={cur}
           onClose={() => setPaying(false)}
           onPay={async (method) => {
-            const r = await run({ action: 'pay', method }, 'Оплачено, чек печатается');
+            const r = await run({ action: 'pay', method }, settings.printGuestChecks ? 'Оплачено, чек печатается' : 'Чек закрыт');
             if (r) {
               setPaying(false);
               setSel(null);
@@ -389,10 +391,10 @@ function PayModal({ o, onClose, onPay }: { o: StaffOrder; onClose: () => void; o
             Назад
           </button>
           <button className="sx-btn ok grow" onClick={() => onPay(method)}>
-            Закрыть чек и печатать
+            Закрыть чек
           </button>
         </div>
-        <p className="sx-muted small">Чек с сайта нефискальный. Фискальный чек выбивайте на вашей онлайн-кассе.</p>
+        <p className="sx-muted small">Фискальный чек гостю выбивается на вашей онлайн-кассе.</p>
       </div>
     </div>
   );

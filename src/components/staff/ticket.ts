@@ -20,6 +20,7 @@ export function ticketHtml(job: { kind: string; station: string; body: any }, pa
     table { width: 100%; border-collapse: collapse } td { vertical-align: top; padding: 2px 0 }
     .note { background: #000; color: #fff; padding: 2px 4px; font-weight: 700; display: inline-block; margin-top: 2px }
     .q { width: 34px; font-size: 18px; font-weight: 800 }
+    .inv { background: #000; color: #fff; font-size: 20px; font-weight: 800; padding: 3px 0; margin-bottom: 4px; letter-spacing: 2px }
   `;
   let body = '';
 
@@ -27,6 +28,7 @@ export function ticketHtml(job: { kind: string; station: string; body: any }, pa
     body = `<div class="c xl">ТЕСТ</div><div class="c l">${esc(b.title)}</div><hr><div class="c">Принтер подключён.<br>${time(b.at)}</div>`;
   } else if (job.kind === 'runner') {
     body = `
+      ${b.add ? '<div class="c inv">ДОЗАКАЗ</div>' : ''}
       <div class="c l">${esc(b.title)}</div>
       <div class="c xl">${esc(b.place)}</div>
       <div class="c">№ ${esc(b.no)} · ${time(b.at)}${b.waiter ? ' · ' + esc(b.waiter) : ''}${b.guests ? ' · гостей ' + esc(b.guests) : ''}</div>
@@ -37,7 +39,7 @@ export function ticketHtml(job: { kind: string; station: string; body: any }, pa
           (l: any) => `<tr><td class="q">${esc(l.qty)}×</td><td><div class="l">${esc(l.name)}</div>${l.mods ? `<div>${esc(l.mods)}</div>` : ''}${l.note ? `<div class="note">${esc(l.note)}</div>` : ''}</td></tr>`,
         )
         .join('')}</table>
-      <hr><div class="c s">бегунок · ${esc(job.station)}</div>`;
+      <hr><div class="c s">бегунок · ${esc(b.title)}</div>`;
   } else {
     const title = job.kind === 'precheck' ? 'ПРЕЧЕК' : job.kind === 'online' ? 'ЗАКАЗ С САЙТА' : 'ЧЕК';
     const cu = b.customer;

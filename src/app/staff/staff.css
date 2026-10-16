@@ -98,6 +98,7 @@
 .pos-total div{display:flex;justify-content:space-between}
 .pos-total .big{font-size:22px;color:var(--cream);font-weight:800}
 .pos-actions{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px}
+.pos-actions.two{grid-template-columns:1.6fr 1fr}
 .pos-menu{display:flex;flex-direction:column;gap:8px}
 .pos-cats{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
 .pos-cats button{flex:none;padding:9px 12px;border-radius:10px;border:0;background:var(--char-3);color:var(--dim);font-weight:700;font-size:13px}

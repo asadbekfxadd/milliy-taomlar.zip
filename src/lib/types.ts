@@ -43,6 +43,7 @@ export type Settings = {
   tables: number;
   servicePct: number;
   autoAcceptOnline: boolean;
+  printGuestChecks: boolean;
   catStations: Record<string, string>;
   paper: '80' | '58';
 };

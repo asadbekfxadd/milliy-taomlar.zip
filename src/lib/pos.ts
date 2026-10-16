@@ -58,6 +58,7 @@ async function enqueue(jobs: Job[]) {
 export async function sendToKitchen(o: OrderRow, st: Settings, opts: { slip?: boolean } = {}) {
   const items: OrderItem[] = (o.items as OrderItem[]).map((l) => ({ ...l }));
   const fresh = items.map((l, i) => ({ l, i })).filter(({ l }) => !l.sent);
+  const isAddition = items.some((l) => l.sent);
   if (!fresh.length) return { order: o, sent: 0 };
   const now = Date.now();
   fresh.forEach(({ l }) => {
@@ -73,9 +74,9 @@ export async function sendToKitchen(o: OrderRow, st: Settings, opts: { slip?: bo
     station,
     kind: 'runner',
     orderId: o.id,
-    body: { title: STATIONS[station] || station, place: placeLabel(saved), no: saved.no, waiter: saved.waiter, guests: saved.guests, when: saved.when, at: now, lines: lines.map(({ name, mods, qty, note }) => ({ name, mods, qty, note })) },
+    body: { add: isAddition, title: STATIONS[station] || station, place: placeLabel(saved), no: saved.no, waiter: saved.waiter, guests: saved.guests, when: saved.when, at: now, lines: lines.map(({ name, mods, qty, note }) => ({ name, mods, qty, note })) },
   }));
-  if (opts.slip) jobs.push({ station: 'cashier', kind: 'online', orderId: o.id, body: checkBody(saved, st, 'online') });
+  if (opts.slip && st.printGuestChecks) jobs.push({ station: 'cashier', kind: 'online', orderId: o.id, body: checkBody(saved, st, 'online') });
   await enqueue(jobs);
   return { order: saved, sent: fresh.length };
 }

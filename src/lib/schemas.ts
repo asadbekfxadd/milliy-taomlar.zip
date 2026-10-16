@@ -74,6 +74,7 @@ export const settingsSchema = z.object({
   tables: z.coerce.number().int().min(0).max(200),
   servicePct: z.coerce.number().min(0).max(30),
   autoAcceptOnline: z.boolean(),
+  printGuestChecks: z.boolean().default(false),
   catStations: z.record(z.string().max(64), z.enum(['kitchen', 'mangal', 'bar'])),
   paper: z.enum(['80', '58']),
 });

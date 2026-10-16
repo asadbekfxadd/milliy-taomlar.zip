@@ -56,6 +56,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
     case 'precheck': {
       if (!items.length) return bad('Чек пустой');
+      if (!st.printGuestChecks) return bad('Печать чеков для гостя выключена в настройках');
       await printCheck(o, st, 'precheck');
       return NextResponse.json(o);
     }
@@ -65,7 +66,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       if (!items.length) return bad('Чек пустой');
       if (items.some((l) => !l.sent)) return bad('Есть позиции, не отправленные на кухню');
       const paid = await saveItems(o, items, st, { status: 'done', paid_with: p.data.method, paid_at: new Date().toISOString() });
-      await printCheck(paid, st, 'receipt');
+      if (st.printGuestChecks) await printCheck(paid, st, 'receipt');
       if (o.source === 'site') refreshOrderMessage(paid).catch(() => {});
       return NextResponse.json(paid);
     }
@@ -75,6 +76,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json(c);
     }
     case 'reprint': {
+      if (!st.printGuestChecks) return bad('Печать чеков для гостя выключена в настройках');
       await printCheck(o, st, closed ? 'receipt' : 'precheck');
       return NextResponse.json(o);
     }

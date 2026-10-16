@@ -116,7 +116,7 @@ export default function PrintStation() {
             <label key={k} className={stations.includes(k) ? 'on' : ''}>
               <input type="checkbox" checked={stations.includes(k)} onChange={() => save(stations.includes(k) ? stations.filter((x) => x !== k) : [...stations, k])} />
               <b>{l}</b>
-              <span>{k === 'cashier' ? 'пречеки, чеки, заказы с сайта' : 'бегунки'}</span>
+              <span>{k === 'cashier' ? 'чеки гостю (если включены)' : 'бегунки на кухню'}</span>
               <button type="button" className="sx-link" disabled={busy} onClick={(e) => (e.preventDefault(), test(k))}>
                 тест
               </button>
