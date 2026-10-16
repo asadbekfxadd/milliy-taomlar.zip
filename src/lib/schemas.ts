@@ -15,11 +15,12 @@ export const orderInput = z.object({
     )
     .min(1)
     .max(60),
-  type: z.enum(['pickup', 'delivery']),
+  type: z.enum(['pickup', 'delivery', 'hall']),
+  table: z.number().int().min(1).max(500).optional(),
   zone: z.number().int().min(0).max(100).optional(),
   address: str(300).optional().default(''),
-  name: str(80),
-  phone: str(40),
+  name: str(80).default(''),
+  phone: str(40).default(''),
   note: str(500).optional().default(''),
   when: z.union([z.literal('asap'), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)]),
   pay: z.enum(['cash', 'card', 'payme', 'click']),

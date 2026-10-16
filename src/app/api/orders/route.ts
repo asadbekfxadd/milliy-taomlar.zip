@@ -7,7 +7,8 @@ import { modsOf, unitPrice } from '@/lib/pricing';
 import { normalizePhone } from '@/lib/format';
 import { notifyNewOrder } from '@/lib/telegram';
 import { clientIp, limited } from '@/lib/rate';
-import { sendToKitchen, stationOf } from '@/lib/pos';
+import { saveItems, sendToKitchen, stationOf } from '@/lib/pos';
+import type { OrderItem } from '@/lib/types';
 import { checkoutUrl, isOnline, providers } from '@/lib/payments';
 
 export const dynamic = 'force-dynamic';
@@ -34,9 +35,14 @@ export async function POST(req: Request) {
   if (o.type === 'delivery' && !st.delivery) return bad('Доставка сейчас недоступна');
   const online = isOnline(o.pay);
   if (online ? !providers()[o.pay as 'payme' | 'click'] : !st.pay[o.pay as 'cash' | 'card']) return bad('Этот способ оплаты недоступен');
-  if (o.name.length < 2) return bad('Укажите имя', 'name');
-  const phone = normalizePhone(o.phone);
-  if (!phone) return bad('Номер в формате +998 90 123 45 67', 'phone');
+  const hall = o.type === 'hall';
+  if (hall) {
+    if (!o.table || o.table > (st.tables || 0)) return bad('Неизвестный стол. Отсканируйте метку на столе ещё раз.');
+    if (online) return bad('За столом оплата официанту: наличными или картой');
+  }
+  if (!hall && o.name.length < 2) return bad('Укажите имя', 'name');
+  const phone = normalizePhone(o.phone) || (hall && !o.phone ? '' : null);
+  if (phone === null) return bad('Номер в формате +998 90 123 45 67', 'phone');
 
   // Prices are always recalculated here from the stored menu; the browser only sends ids and choices.
   const items = [];
@@ -51,6 +57,28 @@ export async function POST(req: Request) {
     items.push({ id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: '', station: stationOf(menu, st, d.id), sent: false, ks: null as null });
   }
   const subtotal = items.reduce((s, i) => s + i.sum, 0);
+
+  // At a table: add to the table's open check if there is one (like a waiter would), otherwise open a new one.
+  if (hall) {
+    const open = await q(`SELECT * FROM orders WHERE type = 'hall' AND table_no = $1 AND status NOT IN ('done','cancelled') ORDER BY created_at DESC LIMIT 1`, [o.table]);
+    let check = open.rows[0] ? mapOrder(open.rows[0]) : null;
+    if (!check) {
+      const ins = await q(
+        `INSERT INTO orders (id, token, type, name, phone, pay, items, subtotal, total, source, table_no, note)
+         VALUES ($1, $2, 'hall', $3, $4, $5, '[]', 0, 0, 'site', $6, $7) RETURNING *`,
+        [newId(), randomBytes(16).toString('hex'), o.name || `Стол ${o.table}`, phone, o.pay, o.table, o.note],
+      );
+      check = mapOrder(ins.rows[0]);
+    }
+    const lines: OrderItem[] = [...(check.items as OrderItem[]), ...items.map((l) => ({ ...l, note: o.note || '' }))];
+    check = await saveItems(check, lines, st);
+    if (st.autoAcceptOnline) check = (await sendToKitchen(check, st)).order;
+    try {
+      const mid = await notifyNewOrder(check);
+      if (mid && !check.tgMessageId) await q('UPDATE orders SET tg_message_id = $2 WHERE id = $1', [check.id, mid]);
+    } catch {}
+    return NextResponse.json({ id: check.id, token: check.token, no: check.no });
+  }
 
   let fee = 0,
     zone = '';

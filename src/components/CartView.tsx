@@ -7,6 +7,7 @@ import DishArt from './DishArt';
 import { Price } from './Dish';
 import { priceCart } from '@/lib/pricing';
 import { fmt, normalizePhone } from '@/lib/format';
+import { forgetTable, readTable } from './TableEntry';
 
 type Errors = Partial<Record<'name' | 'phone' | 'address' | 'time' | 'zone', string>>;
 
@@ -15,7 +16,8 @@ export default function CartView() {
   const router = useRouter();
   const { lines, subtotal } = useMemo(() => priceCart(menu, cart), [menu, cart]);
   const types = [st.pickup && 'pickup', st.delivery && 'delivery'].filter(Boolean) as ('pickup' | 'delivery')[];
-  const [type, setType] = useState<'pickup' | 'delivery' | null>(types[0] ?? null);
+  const [type, setType] = useState<'pickup' | 'delivery' | 'hall' | null>(types[0] ?? null);
+  const [table, setTable] = useState<number | null>(null);
   const [zone, setZone] = useState(0);
   const [f, setF] = useState({ name: '', phone: '', address: '', note: '', time: '', website: '' });
   const [when, setWhen] = useState<'asap' | 'time'>('asap');
@@ -30,10 +32,18 @@ export default function CartView() {
       const saved = JSON.parse(localStorage.getItem('mt-contact') || 'null');
       if (saved) setF((x) => ({ ...x, name: saved.name || '', phone: saved.phone || '', address: saved.address || '' }));
       setLast(JSON.parse(localStorage.getItem('mt-order') || 'null'));
+      const t = readTable();
+      if (t && t <= (st.tables || 0)) {
+        setTable(t);
+        setType('hall');
+        setPay(st.pay.cash ? 'cash' : 'card');
+      }
     } catch {}
   }, []);
 
   const del = type === 'delivery';
+  const hall = type === 'hall' && table !== null;
+  const service = hall ? Math.round((subtotal * (st.servicePct || 0)) / 100) : 0;
   const z = st.zones[zone];
   const fee = del && z ? z.fee : 0;
   const short = del && z ? Math.max(0, z.min - subtotal) : 0;
@@ -42,8 +52,8 @@ export default function CartView() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const E: Errors = {};
-    if (f.name.trim().length < 2) E.name = 'Укажите имя';
-    if (!normalizePhone(f.phone)) E.phone = 'Номер в формате +998 90 123 45 67';
+    if (!hall && f.name.trim().length < 2) E.name = 'Укажите имя';
+    if (!hall && !normalizePhone(f.phone)) E.phone = 'Номер в формате +998 90 123 45 67';
     if (del && f.address.trim().length < 5) E.address = 'Укажите улицу и дом';
     if (when === 'time' && !f.time) E.time = 'Выберите время';
     setErrors(E);
@@ -60,6 +70,7 @@ export default function CartView() {
         body: JSON.stringify({
           items: cart.map(({ id, si, ex, qty }) => ({ id, si, ex, qty })),
           type,
+          table: hall ? table : undefined,
           zone: del ? zone : undefined,
           address: del ? f.address : '',
           name: f.name,
@@ -78,7 +89,7 @@ export default function CartView() {
       }
       try {
         localStorage.setItem('mt-order', JSON.stringify(j));
-        localStorage.setItem('mt-contact', JSON.stringify({ name: f.name, phone: f.phone, address: f.address }));
+        if (!hall) localStorage.setItem('mt-contact', JSON.stringify({ name: f.name, phone: f.phone, address: f.address }));
       } catch {}
       clear();
       if (j.payUrl) {
@@ -153,7 +164,29 @@ export default function CartView() {
 
           {lines.length > 0 && (
             <form className="form" onSubmit={submit} noValidate>
-              {types.length ? (
+              {table !== null ? (
+                <div className="fld full">
+                  <span className="lbl">Где вы</span>
+                  <div className="segm">
+                    <button type="button" className={type === 'hall' ? 'on' : ''} onClick={() => (setType('hall'), setPay(st.pay.cash ? 'cash' : 'card'))}>
+                      За столом {table}
+                    </button>
+                    {types.map((k) => (
+                      <button key={k} type="button" className={type === k ? 'on' : ''} onClick={() => setType(k)}>
+                        {k === 'pickup' ? 'С собой' : 'Доставка'}
+                      </button>
+                    ))}
+                  </div>
+                  {hall && (
+                    <span className="cap">
+                      Заказ сразу уйдёт на кухню и придёт к вашему столу. Не ваш стол?{' '}
+                      <button type="button" className="link" onClick={() => (forgetTable(), setTable(null), setType(types[0] ?? null))}>
+                        Сбросить
+                      </button>
+                    </span>
+                  )}
+                </div>
+              ) : types.length ? (
                 <div className="fld full">
                   <span className="lbl">Способ получения</span>
                   <div className="segm">
@@ -193,6 +226,8 @@ export default function CartView() {
                   </div>
                 </>
               )}
+              {!hall && (
+              <>
               <div className={`fld ${errors.name ? 'bad' : ''}`}>
                 <label htmlFor="coName">Имя</label>
                 <input id="coName" autoComplete="name" value={f.name} onChange={set('name')} />
@@ -219,6 +254,8 @@ export default function CartView() {
                   </>
                 )}
               </div>
+              </>
+              )}
               <div className="fld full">
                 <label htmlFor="coNote">Комментарий</label>
                 <textarea id="coNote" value={f.note} onChange={set('note')} placeholder="Например: без лука, позвонить за 10 минут" />
@@ -233,7 +270,7 @@ export default function CartView() {
                     <div className={`opt ${pay === 'cash' ? 'on' : ''}`}>
                       <label>
                         <input type="radio" name="pay" checked={pay === 'cash'} onChange={() => setPay('cash')} />
-                        <span>Наличными при получении</span>
+                        <span>{hall ? 'Наличными официанту' : 'Наличными при получении'}</span>
                       </label>
                     </div>
                   )}
@@ -241,11 +278,11 @@ export default function CartView() {
                     <div className={`opt ${pay === 'card' ? 'on' : ''}`}>
                       <label>
                         <input type="radio" name="pay" checked={pay === 'card'} onChange={() => setPay('card')} />
-                        <span>Картой Uzcard / Humo при получении</span>
+                        <span>{hall ? 'Картой официанту' : 'Картой Uzcard / Humo при получении'}</span>
                       </label>
                     </div>
                   )}
-                  {online.payme && (
+                  {!hall && online.payme && (
                     <div className={`opt ${pay === 'payme' ? 'on' : ''}`}>
                       <label>
                         <input type="radio" name="pay" checked={pay === 'payme'} onChange={() => setPay('payme')} />
@@ -257,7 +294,7 @@ export default function CartView() {
                       </label>
                     </div>
                   )}
-                  {online.click && (
+                  {!hall && online.click && (
                     <div className={`opt ${pay === 'click' ? 'on' : ''}`}>
                       <label>
                         <input type="radio" name="pay" checked={pay === 'click'} onChange={() => setPay('click')} />
@@ -277,6 +314,12 @@ export default function CartView() {
                   <span>Блюда</span>
                   <span className="num">{fmt(subtotal)} сум</span>
                 </div>
+                {service > 0 && (
+                  <div>
+                    <span>Обслуживание {st.servicePct}%</span>
+                    <span className="num">{fmt(service)} сум</span>
+                  </div>
+                )}
                 {del && (
                   <div>
                     <span>Доставка</span>
@@ -286,7 +329,7 @@ export default function CartView() {
                 <div className="t">
                   <span>Итого</span>
                   <span className="num">
-                    {fmt(subtotal + fee)} <small style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--dim)' }}>сум</small>
+                    {fmt(subtotal + fee + service)} <small style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--dim)' }}>сум</small>
                   </span>
                 </div>
               </div>
@@ -301,11 +344,11 @@ export default function CartView() {
                   {st.phone ? ` Телефон: ${st.phone}` : ''}
                 </div>
               )}
-              <button className="btn full" disabled={short > 0 || !types.length || busy}>
-                {busy ? 'Отправляем…' : pay === 'payme' || pay === 'click' ? `Перейти к оплате · ${fmt(subtotal + fee)} сум` : 'Отправить заказ'}
+              <button className="btn full" disabled={short > 0 || (!types.length && !hall) || busy}>
+                {busy ? 'Отправляем…' : pay === 'payme' || pay === 'click' ? `Перейти к оплате · ${fmt(subtotal + fee)} сум` : hall ? `Заказать к столу ${table}` : 'Отправить заказ'}
               </button>
               <p className="cap full" style={{ margin: 0 }}>
-                Имя, телефон и адрес нужны только для выполнения этого заказа.
+                {hall ? 'Оплата — официанту, когда будете готовы. Можно дозаказывать сколько угодно.' : 'Имя, телефон и адрес нужны только для выполнения этого заказа.'}
               </p>
             </form>
           )}

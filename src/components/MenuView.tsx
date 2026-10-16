@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { TableNote } from './TableEntry';
 import { useSite } from './Providers';
 import { DishBody, DishObj, DishRow, Opener, Tags } from './Dish';
 import DishArt from './DishArt';
@@ -47,6 +48,7 @@ export default function MenuView() {
         <div className="in">
           <div className="kicker">{settings.name}</div>
           <h1>Меню</h1>
+          <TableNote />
           <div className="row">
             <p className="muted" style={{ maxWidth: '48ch', margin: 0, fontSize: 17 }}>
               Нажмите на блюдо, чтобы увидеть состав, аллергены и выбрать порцию. Цены в сумах.
