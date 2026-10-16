@@ -36,7 +36,7 @@ const h = (s: string) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;
 
 type O = {
   id: string; no: number; status: string; type: string; zone: string; address: string; name: string; phone: string;
-  note: string; when: string; pay: string; fee: number; total: number; items: any; payStatus?: string; source?: string; tableNo?: number | null;
+  note: string; when: string; pay: string; fee: number; total: number; items: any; payStatus?: string; source?: string; tableNo?: number | null; discount?: number; promo?: string;
 };
 const PAY_TXT: Record<string, string> = { cash: 'Наличные', card: 'Карта при получении', payme: 'Payme', click: 'Click' };
 
@@ -53,6 +53,7 @@ export function orderText(o: O) {
     '',
     items,
     o.fee ? `Доставка — ${fmt(o.fee)}` : '',
+    o.discount ? `🎟 Промокод ${h(o.promo || '')} — −${fmt(o.discount)}` : '',
     `<b>Итого: ${fmt(o.total)} сум</b>`,
     o.note ? `\n💬 ${h(o.note)}` : '',
   ]

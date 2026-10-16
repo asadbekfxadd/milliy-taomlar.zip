@@ -1,27 +1,45 @@
 import type { Metadata } from 'next';
 import { getSettings } from '@/lib/data';
 import { isAdmin } from '@/lib/auth';
-import { orderSummaryText } from '@/lib/copy';
+import { getLang } from '@/lib/lang';
 import { fmt, handle } from '@/lib/format';
+import { prepRange, siteText, translate, zoneName, type Key } from '@/lib/i18n';
 import CopyButton from '@/components/CopyButton';
 
-export const metadata: Metadata = { title: 'Контакты', description: 'Адрес, телефон, часы работы и зоны доставки.', alternates: { canonical: '/contacts' } };
+export async function generateMetadata(): Promise<Metadata> {
+  const uz = getLang() === 'uz';
+  return {
+    title: uz ? 'Aloqa' : 'Контакты',
+    description: uz ? 'Manzil, telefon, ish vaqti va yetkazish hududlari.' : 'Адрес, телефон, часы работы и зоны доставки.',
+    alternates: { canonical: '/contacts' },
+  };
+}
 
 export default async function ContactsPage() {
   const s = await getSettings();
+  const lang = getLang();
+  const t = (k: Key, v?: Record<string, string | number>) => translate(lang, k, v);
+  const x = siteText(s, lang);
   const ed = isAdmin();
-  const miss = (t: string) => (ed ? <span className="muted">{t}: заполните в «Управление → Настройки»</span> : null);
-  const addr = [s.address, s.city].filter(Boolean).join(', ');
+  const miss = (txt: string) => (ed ? <span className="muted">{txt}: заполните в «Управление → Настройки»</span> : null);
+  const addr = [x.address, x.city].filter(Boolean).join(', ');
   const mapHref = s.mapUrl || `https://yandex.uz/maps/?text=${encodeURIComponent(addr || 'Янгиюль')}`;
+  const parts: string[] = [];
+  if (s.pickup) parts.push(t('band.pickup', { t: prepRange(s) }));
+  if (s.delivery && s.zones.length) {
+    const n = s.zones.length;
+    parts.push(t('band.delivery', { n, zones: n === 1 ? t('band.zone1') : t('band.zones'), f: fmt(Math.min(...s.zones.map((z) => +z.fee))), m: fmt(Math.min(...s.zones.map((z) => +z.min))) }));
+  }
+  if (!parts.length) parts.push(t('band.hallOnly'));
   return (
     <>
       <section className="masthead g">
         <div className="in">
-          <div className="kicker">Контакты</div>
+          <div className="kicker">{t('ct.kicker')}</div>
           <h1>
-            Ждём
+            {t('ct.h1')}
             <br />
-            <em>в гости</em>
+            <em>{t('ct.h2')}</em>
           </h1>
         </div>
       </section>
@@ -32,27 +50,22 @@ export default async function ContactsPage() {
               <>
                 <div className="big-phone num">{s.phone}</div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
-                  <CopyButton text={s.phone} />
+                  <CopyButton text={s.phone} label={t('ct.copy')} doneLabel={t('ct.copied')} />
                   <a className="copy" href={`tel:${s.phone.replace(/[^\d+]/g, '')}`} style={{ textDecoration: 'none' }}>
-                    Позвонить
+                    {t('ct.call')}
                   </a>
                 </div>
               </>
             ) : ed ? (
-              <>
-                <div className="big-phone" style={{ color: 'var(--dim)' }}>
-                  Телефон
-                </div>
-                {miss('Номер не указан')}
-              </>
+              miss('Номер не указан')
             ) : null}
             <dl className="kv" style={{ marginTop: 36 }}>
-              <dt>Адрес</dt>
-              <dd>{s.address ? addr : <>{s.city} {miss('точный адрес')}</>}</dd>
-              {(s.hours || ed) && (
+              <dt>{t('ct.address')}</dt>
+              <dd>{x.address ? addr : <>{x.city} {miss('точный адрес')}</>}</dd>
+              {(x.hours || ed) && (
                 <>
-                  <dt>Часы</dt>
-                  <dd>{s.hours || miss('часы работы')}</dd>
+                  <dt>{t('ct.hours')}</dt>
+                  <dd>{x.hours || miss('часы работы')}</dd>
                 </>
               )}
               {(s.instagram || ed) && (
@@ -83,25 +96,29 @@ export default async function ContactsPage() {
                   </dd>
                 </>
               )}
-              <dt>Заказы</dt>
-              <dd>{orderSummaryText(s)}</dd>
+              <dt>{t('ct.orders')}</dt>
+              <dd>{parts.join(' ')}</dd>
             </dl>
             {s.delivery && s.zones.length > 0 && (
               <div style={{ overflowX: 'auto', marginTop: 12 }}>
                 <table className="zones num">
                   <thead>
                     <tr>
-                      <th>Зона доставки</th>
-                      <th>Доставка</th>
-                      <th>Мин. заказ</th>
+                      <th>{t('ct.zone')}</th>
+                      <th>{t('ct.fee')}</th>
+                      <th>{t('ct.min')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {s.zones.map((z, i) => (
                       <tr key={i}>
-                        <td>{z.name}</td>
-                        <td>{fmt(z.fee)} сум</td>
-                        <td>{fmt(z.min)} сум</td>
+                        <td>{zoneName(z, lang)}</td>
+                        <td>
+                          {fmt(z.fee)} {t('sum')}
+                        </td>
+                        <td>
+                          {fmt(z.min)} {t('sum')}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -112,8 +129,8 @@ export default async function ContactsPage() {
           <div>
             <a className="mapcard" href={mapHref} target="_blank" rel="noopener">
               <div>
-                <div className="kicker">Карта</div>
-                <div style={{ fontFamily: 'var(--display)', fontSize: 34, fontWeight: 600, marginTop: 8 }}>Построить маршрут</div>
+                <div className="kicker">{t('ct.map')}</div>
+                <div style={{ fontFamily: 'var(--display)', fontSize: 34, fontWeight: 600, marginTop: 8 }}>{t('ct.route')}</div>
                 <div className="cap" style={{ marginTop: 6 }}>
                   {addr}
                 </div>

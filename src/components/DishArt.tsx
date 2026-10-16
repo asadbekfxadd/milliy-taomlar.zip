@@ -25,8 +25,15 @@ export async function artBitmap(key: string, size: number) {
 export default function DishArt({ art, photo, className = '', label = '', eager = false }: { art: string; photo?: string; className?: string; label?: string; eager?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const cvRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const [state, setState] = useState<'idle' | 'loaded' | 'photo-failed'>('idle');
   const usePhoto = Boolean(photo) && state !== 'photo-failed';
+
+  // a photo can finish loading before hydration, when onLoad has no listener yet
+  useEffect(() => {
+    const im = imgRef.current;
+    if (usePhoto && im?.complete) setState(im.naturalWidth > 0 ? 'loaded' : 'photo-failed');
+  }, [usePhoto, photo]);
 
   useEffect(() => {
     if (usePhoto) return;
@@ -72,6 +79,7 @@ export default function DishArt({ art, photo, className = '', label = '', eager 
       {usePhoto ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={imgRef}
           src={photoSrc(photo)}
           alt=""
           loading={eager ? 'eager' : 'lazy'}

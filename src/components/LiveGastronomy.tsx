@@ -2,9 +2,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { LIVE_STEPS } from '@/lib/defaults';
 import { loadArt } from './DishArt';
+import { useSite } from './Providers';
 
 /* Scroll-driven kazan: heat → meat & onion → carrots → rice → finished osh with steam. */
 export default function LiveGastronomy() {
+  const { t, lang } = useSite();
   const sec = useRef<HTMLElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const bar = useRef<HTMLElement>(null);
@@ -85,19 +87,19 @@ export default function LiveGastronomy() {
   }, []);
 
   return (
-    <section className="live" id="live" ref={sec} aria-label="Живая гастрономия: как жарят шашлык">
+    <section className="live" id="live" ref={sec} aria-label={t('live.aria')}>
       <div className="live-stage g">
         <div className="live-copy">
-          <div className="kicker">Живая гастрономия</div>
+          <div className="kicker">{t('live.kicker')}</div>
           <h2>
-            Пять шагов <em>до тарелки</em>
+            {t('live.h1')} <em>{t('live.h2')}</em>
           </h2>
           <ol className="steps">
             {LIVE_STEPS.map((s, i) => (
               <li key={i} className={reduce || i === step ? 'on' : ''}>
                 <b className="num">0{i + 1}</b>
-                <h3>{s[0]}</h3>
-                <p>{s[1]}</p>
+                <h3>{lang === 'uz' ? s.tUz : s.t}</h3>
+                <p>{lang === 'uz' ? s.pUz : s.p}</p>
               </li>
             ))}
           </ol>

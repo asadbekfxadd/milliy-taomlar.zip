@@ -2,12 +2,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSite } from './Providers';
 import DishArt from './DishArt';
-import { Tags } from './Dish';
+import { Badges } from './Dish';
+import { catName, dishAllergens, dishDesc, dishIngr, dishSub, extraLabel, sizeLabel, unitText } from '@/lib/i18n';
 import { portionLabel, unitPrice } from '@/lib/pricing';
 import { fmt } from '@/lib/format';
 
 export default function DishModal({ id, onClose }: { id: string; onClose: () => void }) {
-  const { menu, add } = useSite();
+  const { menu, add, t, lang } = useSite();
+  const addBtn = useRef<HTMLButtonElement>(null);
   const d = menu.dishes.find((x) => x.id === id);
   const [si, setSi] = useState(0);
   const [ex, setEx] = useState<number[]>([]);
@@ -48,37 +50,37 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-labelledby="dlgT">
       <div className="scrim" onClick={onClose} />
-      <div className={`sheet ${d.photo ? '' : 'solo'}`} ref={sheet}>
-        <button className="x" onClick={onClose} aria-label="Закрыть">
+      <div className="sheet" ref={sheet} data-fly>
+        <button className="x" onClick={onClose} aria-label={t('dish.close')}>
           ×
         </button>
-        {d.photo && (
-          <div style={{ position: 'relative' }}>
-            <Tags d={d} />
-            <DishArt art={d.art} photo={d.photo} label={d.ru} eager />
-          </div>
-        )}
+        <div className={`sheet-fig ${d.photo ? '' : 'art'}`}>
+          <Badges d={d} />
+          <DishArt art={d.art} photo={d.photo} label={d.ru} eager className={d.photo ? '' : 'round'} />
+          {!d.photo && <span className="art-note">{t('dish.photoSoon')}</span>}
+        </div>
         <div className="body">
           <div>
             <div className="cap" style={{ letterSpacing: '.12em', textTransform: 'uppercase' }}>
-              {cat?.name} · {d.ru}
+              {catName(cat, lang)}
+              {dishSub(d, lang) ? ` · ${dishSub(d, lang)}` : ''}
             </div>
             <h2 id="dlgT" style={{ marginTop: 12 }}>
               {d.name}
             </h2>
           </div>
-          <p style={{ margin: 0, color: 'var(--dim)', fontSize: 17 }}>{d.desc}</p>
+          <p style={{ margin: 0, color: 'var(--dim)', fontSize: 17 }}>{dishDesc(d, lang)}</p>
 
           {d.sizes.length > 1 && (
             <div>
-              <div className="opt-h">Порция</div>
+              <div className="opt-h">{t('dish.portion')}</div>
               <div className="opts" role="radiogroup">
                 {d.sizes.map((s, i) => (
                   <div key={i} className={`opt ${si === i ? 'on' : ''}`}>
                     <label>
                       <input type="radio" name="sz" checked={si === i} onChange={() => setSi(i)} />
                       <span>
-                        {s.label} <span className="cap">{s.w}</span>
+                        {sizeLabel(s, lang)} <span className="cap">{unitText(s.w, lang)}</span>
                       </span>
                     </label>
                     <span className="num" style={{ fontWeight: 700 }}>
@@ -92,7 +94,7 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
 
           {d.extras.length > 0 && (
             <div>
-              <div className="opt-h">Добавить</div>
+              <div className="opt-h">{t('dish.extras')}</div>
               <div className="opts">
                 {d.extras.map((e, i) => {
                   const on = ex.includes(i);
@@ -100,7 +102,7 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
                     <div key={i} className={`opt ${on ? 'on' : ''}`}>
                       <label>
                         <input type="checkbox" checked={on} onChange={() => setEx(on ? ex.filter((x) => x !== i) : [...ex, i])} />
-                        <span>{e.label}</span>
+                        <span>{extraLabel(e, lang)}</span>
                       </label>
                       <span className="num" style={{ fontWeight: 700 }}>
                         +{fmt(e.p)}
@@ -114,22 +116,24 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
 
           <div className="facts">
             <div>
-              <b>Состав</b>
-              {d.ingr.length ? d.ingr.join(', ') : 'уточните у ресторана'}
+              <b>{t('dish.ingr')}</b>
+              {dishIngr(d, lang).length ? dishIngr(d, lang).join(', ') : t('dish.ingrNone')}
             </div>
             <div>
-              <b>Аллергены</b>
-              {d.allergens.length ? d.allergens.join(', ') : 'основные аллергены не входят в рецепт'}
+              <b>{t('dish.allergens')}</b>
+              {d.allergens.length ? dishAllergens(d, lang).join(', ') : t('dish.allergensNone')}
               <br />
-              <span className="cap">Если есть аллергия, уточните у ресторана.</span>
+              <span className="cap">{t('dish.allergyNote')}</span>
             </div>
             <div>
-              <b>Порция</b>
-              <span className="num">{portionLabel(d, si)}</span>
+              <b>{t('dish.portion')}</b>
+              <span className="num">{unitText(portionLabel(d, si), lang)}</span>
             </div>
             <div>
-              <b>Цена за единицу</b>
-              <span className="num">{fmt(u)} сум</span>
+              <b>{t('dish.unit')}</b>
+              <span className="num">
+                {fmt(u)} {t('sum')}
+              </span>
             </div>
           </div>
 
@@ -137,28 +141,29 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
             {d.available ? (
               <>
                 <div className="stepper">
-                  <button onClick={() => setQty(Math.max(1, qty - 1))} aria-label="Меньше">
+                  <button onClick={() => setQty(Math.max(1, qty - 1))} aria-label={t('dish.less')}>
                     −
                   </button>
                   <span className="num" aria-live="polite">
                     {qty}
                   </span>
-                  <button onClick={() => setQty(qty + 1)} aria-label="Больше">
+                  <button onClick={() => setQty(qty + 1)} aria-label={t('dish.moreQty')}>
                     +
                   </button>
                 </div>
                 <button
+                  ref={addBtn}
                   className="btn"
                   onClick={() => {
-                    add(d.id, si, ex, qty);
+                    add(d.id, si, ex, qty, sheet.current?.querySelector('.sheet-fig'));
                     onClose();
                   }}
                 >
-                  Добавить · <span className="num">{fmt(u * qty)}</span> сум
+                  {t('dish.addSum', { s: fmt(u * qty) })}
                 </button>
               </>
             ) : (
-              <div className="alert err">Сегодня этого блюда нет в наличии.</div>
+              <div className="alert err">{t('dish.notToday')}</div>
             )}
           </div>
         </div>

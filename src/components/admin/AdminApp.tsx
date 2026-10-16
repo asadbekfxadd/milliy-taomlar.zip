@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AdminOrder, Dish, Menu, Settings } from '@/lib/types';
-import { D, STATUS, STORY, TAGS } from '@/lib/defaults';
+import { D, MOODS, STATUS, STORY, TAGS } from '@/lib/defaults';
 import { basePrice } from '@/lib/pricing';
 import { fmt, prettyPhone } from '@/lib/format';
 import DishArt from '../DishArt';
@@ -10,8 +10,15 @@ import { useSite } from '../Providers';
 
 const ART_LABELS: Record<string, string> = {
   plov: 'Плов', somsa: 'Самса', shashlik: 'Шашлык', lagmon: 'Лагман', non: 'Лепёшка', manti: 'Манты', shurva: 'Шурпа/суп', kazan: 'Казан-кабоб',
-  salad: 'Салат', tea: 'Чай', chakchak: 'Чак-чак/сладкое', 'glass-mango': 'Напиток манго', 'glass-kompot': 'Компот', 'glass-ayron': 'Айран/сюзьма', spices: 'Специи',
+  salad: 'Салат', tea: 'Чай', chakchak: 'Чак-чак/сладкое', 'glass-mango': 'Напиток манго', 'glass-kompot': 'Компот', 'glass-ayron': 'Айран',
+  brizol: 'Бризоль', mangal: 'Ассорти с мангала', grillveg: 'Овощи гриль', rice: 'Рис', fries: 'Картофель фри', potato: 'Картофель по-деревенски',
+  pickles: 'Соленья', 'sauce-red': 'Соус томатный', 'sauce-white': 'Соус белый / сюзьма', 'sauce-chili': 'Соус острый', 'glass-water': 'Вода',
+  'glass-cola': 'Газировка', sweets: 'Набот и халва', icecream: 'Мороженое', spices: 'Специи',
+  'shashlik-beef': 'Шашлык из говядины', 'shashlik-lula': 'Люля-кебаб', 'shashlik-liver': 'Печень на мангале', 'shashlik-chicken': 'Шашлык из курицы',
+  'brizol-beef': 'Бризоль из говядины', 'brizol-mix': 'Бризоль ассорти', dimlama: 'Димлама', 'somsa-pumpkin': 'Самса с тыквой', patir: 'Патир',
+  chuchvara: 'Чучвара', xonim: 'Ханум', mastava: 'Мастава', 'salad-spring': 'Салат весенний', 'salad-tashkent': 'Салат «Ташкент»', 'sauce-qatiq': 'Соус из катыка', 'tea-black': 'Чёрный чай',
 };
+const THEMES: [string, string][] = [['ember', 'Угли (тёмный, огонь)'], ['saffron', 'Шафран'], ['pom', 'Гранат'], ['gold', 'Золото (выпечка)'], ['cream', 'Светлый (тесто)'], ['copper', 'Медь (супы)'], ['herb', 'Зелень (свежее, светлый)'], ['sand', 'Песок (светлый)'], ['teal', 'Бирюза (напитки)'], ['rose', 'Роза (десерты)']];
 const ALL_STATUS: [string, string][] = [...STATUS, ['cancelled', 'Отменён']];
 const clone = <T,>(o: T): T => JSON.parse(JSON.stringify(o));
 const lines = <T,>(arr: T[], fn: (x: T) => string) => (arr || []).map(fn).join('\n');
@@ -23,6 +30,7 @@ function parseLines(txt: string, keys: string[]) {
     .map((a) => {
       const o: any = {};
       keys.forEach((k, i) => (o[k] = ['p', 'fee', 'min'].includes(k) ? +String(a[i] || '').replace(/\D/g, '') || 0 : a[i] || ''));
+      if ('uz' in o && !o.uz) delete o.uz;
       return o;
     });
 }
@@ -38,7 +46,7 @@ async function api(url: string, method: string, body?: unknown) {
 export default function AdminApp({ initialMenu, initialSettings, integ }: { initialMenu: Menu; initialSettings: Settings; integ: { telegram: boolean; telegramWebhook: boolean; payme: boolean; click: boolean; site: string } }) {
   const { toast } = useSite();
   const router = useRouter();
-  const [tab, setTab] = useState<'orders' | 'menu' | 'cats' | 'settings' | 'int'>('orders');
+  const [tab, setTab] = useState<'orders' | 'menu' | 'cats' | 'combos' | 'settings' | 'int'>('orders');
   const [menu, setMenu] = useState<Menu>(() => clone(initialMenu));
   const [settings, setSettings] = useState<Settings>(() => clone(initialSettings));
   const [dirty, setDirty] = useState({ menu: false, settings: false });
@@ -118,6 +126,7 @@ export default function AdminApp({ initialMenu, initialSettings, integ }: { init
     ['orders', 'Заказы' + (newCount ? ` (${newCount})` : '')],
     ['menu', 'Блюда'],
     ['cats', 'Категории'],
+    ['combos', 'Сеты и промокоды'],
     ['settings', 'Настройки'],
     ['int', 'Интеграции'],
   ];
@@ -152,11 +161,22 @@ export default function AdminApp({ initialMenu, initialSettings, integ }: { init
         }} />}
         {tab === 'menu' && <MenuTab menu={menu} edit={editMenu} toast={toast} />}
         {tab === 'cats' && <CatsTab menu={menu} edit={editMenu} />}
+        {tab === 'combos' && <CombosTab menu={menu} edit={editMenu} s={settings} editS={editSettings} />}
         {tab === 'settings' && <SettingsTab s={settings} edit={editSettings} toast={toast} menuCats={menu.cats} />}
         {tab === 'int' && <IntTab integ={integ} toast={toast} />}
 
         {(tab === 'menu' || tab === 'cats' || tab === 'settings') && (
           <SaveBar dirty={tab === 'settings' ? dirty.settings : dirty.menu} onSave={() => save(tab === 'settings' ? 'settings' : 'menu')} onRevert={() => revert(tab === 'settings' ? 'settings' : 'menu')} />
+        )}
+        {tab === 'combos' && (
+          <SaveBar
+            dirty={dirty.menu || dirty.settings}
+            onSave={async () => {
+              if (dirty.menu) await save('menu');
+              if (dirty.settings) await save('settings');
+            }}
+            onRevert={() => (revert('menu'), revert('settings'))}
+          />
         )}
       </div>
     </div>
@@ -291,6 +311,7 @@ function MenuTab({ menu, edit, toast }: { menu: Menu; edit: (fn: (m: Menu) => vo
                   <div>
                     <b>{d.name}</b> <span className="cap">{d.ru} · {fmt(basePrice(d))} сум</span>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                      {d.hidden && <span className="pill">скрыто</span>}
                       {!d.available && <span className="pill new">нет в наличии</span>}
                       {d.featured && <span className="pill warn">на главной</span>}
                       <span className={`pill ${d.photo ? 'ok' : ''}`}>{d.photo ? 'фото' : 'иллюстрация'}</span>
@@ -357,22 +378,30 @@ function DishEditor({ d, menu, edit, toast, onDeleted }: { d: Dish; menu: Menu; 
         </select>
       </div>
       <div className="fld full">
-        <label>Описание</label>
+        <label>Описание (рус.)</label>
         <textarea value={d.desc} onChange={(e) => up((x) => (x.desc = e.target.value))} />
+      </div>
+      <div className="fld full">
+        <label>Описание (узб.) — для гостей на узбекском</label>
+        <textarea value={d.descUz || ''} onChange={(e) => up((x) => (x.descUz = e.target.value))} />
       </div>
       {field('price', 'Цена без вариантов, сум', { inputMode: 'numeric' })}
       {field('weight', 'Вес / объём')}
       <div className="fld full">
-        <label>Варианты порции: название | вес | цена (по строке)</label>
-        <textarea rows={3} defaultValue={lines(d.sizes, (s) => `${s.label} | ${s.w || ''} | ${s.p}`)} onChange={(e) => up((x) => (x.sizes = parseLines(e.target.value, ['label', 'w', 'p'])))} />
+        <label>Варианты порции: название | вес | цена | название по-узбекски (по строке)</label>
+        <textarea rows={3} defaultValue={lines(d.sizes, (s) => `${s.label} | ${s.w || ''} | ${s.p}${s.uz ? ' | ' + s.uz : ''}`)} onChange={(e) => up((x) => (x.sizes = parseLines(e.target.value, ['label', 'w', 'p', 'uz'])))} />
       </div>
       <div className="fld full">
-        <label>Добавки: название | цена (по строке)</label>
-        <textarea rows={3} defaultValue={lines(d.extras, (s) => `${s.label} | ${s.p}`)} onChange={(e) => up((x) => (x.extras = parseLines(e.target.value, ['label', 'p'])))} />
+        <label>Добавки: название | цена | название по-узбекски (по строке)</label>
+        <textarea rows={3} defaultValue={lines(d.extras, (s) => `${s.label} | ${s.p}${s.uz ? ' | ' + s.uz : ''}`)} onChange={(e) => up((x) => (x.extras = parseLines(e.target.value, ['label', 'p', 'uz'])))} />
       </div>
       <div className="fld">
         <label>Состав через запятую</label>
         <input defaultValue={d.ingr.join(', ')} onChange={(e) => up((x) => (x.ingr = e.target.value.split(',').map((s) => s.trim()).filter(Boolean)))} />
+      </div>
+      <div className="fld">
+        <label>Состав по-узбекски</label>
+        <input defaultValue={(d.ingrUz || []).join(', ')} onChange={(e) => up((x) => (x.ingrUz = e.target.value.split(',').map((s) => s.trim()).filter(Boolean)))} />
       </div>
       <div className="fld">
         <label>Аллергены через запятую</label>
@@ -383,15 +412,35 @@ function DishEditor({ d, menu, edit, toast, onDeleted }: { d: Dish; menu: Menu; 
         <div className="tgl">
           {Object.entries(TAGS).map(([k, l]) => (
             <button key={k} type="button" className={`chk ${d.tags.includes(k) ? 'on' : ''}`} onClick={() => up((x) => (x.tags = x.tags.includes(k) ? x.tags.filter((t) => t !== k) : [...x.tags, k]))}>
-              {l}
+              {l.ru}
+              {l.badge ? ' (значок)' : ''}
             </button>
           ))}
+          <button type="button" className={`chk ${d.hidden ? 'on' : ''}`} onClick={() => up((x) => (x.hidden = !x.hidden))}>
+            Скрыто с сайта
+          </button>
+          <button type="button" className={`chk ${d.skewer ? 'on' : ''}`} onClick={() => up((x) => (x.skewer = !x.skewer))}>
+            Цена за шампур
+          </button>
           <button type="button" className={`chk ${d.available ? 'on' : ''}`} onClick={() => up((x) => (x.available = !x.available))}>
             В наличии
           </button>
           <button type="button" className={`chk ${d.featured ? 'on' : ''}`} onClick={() => up((x) => (x.featured = !x.featured))}>
             На главной
           </button>
+        </div>
+      </div>
+      <div className="fld full">
+        <span className="lbl">«Bugun nima yeymiz?» — в каких подборках показывать</span>
+        <div className="tgl">
+          {MOODS.map((m) => {
+            const on = (d.moods || []).includes(m.id);
+            return (
+              <button key={m.id} type="button" className={`chk ${on ? 'on' : ''}`} onClick={() => up((x) => (x.moods = on ? (x.moods || []).filter((y) => y !== m.id) : [...(x.moods || []), m.id]))}>
+                {m.ru}
+              </button>
+            );
+          })}
         </div>
       </div>
       <div className="fld full">
@@ -461,6 +510,127 @@ function DishEditor({ d, menu, edit, toast, onDeleted }: { d: Dish; menu: Menu; 
   );
 }
 
+function CombosTab({ menu, edit, s, editS }: { menu: Menu; edit: (fn: (m: Menu) => void) => void; s: Settings; editS: (fn: (s: Settings) => void) => void }) {
+  const combos = menu.combos ?? [];
+  const dishName = (id: string) => menu.dishes.find((d) => d.id === id)?.name ?? `нет блюда ${id}`;
+  return (
+    <div className="agrid">
+      <div className="card" style={{ gridColumn: '1/-1' }}>
+        <h3 style={{ fontSize: 28, marginBottom: 6 }}>Популярные сочетания</h3>
+        <p className="muted" style={{ marginTop: 0 }}>Цена сета на сайте — всегда сумма текущих цен блюд. Если блюда нет в наличии, сет скрывается.</p>
+        <div className="dlist">
+          {combos.map((c, i) => (
+            <div key={c.id} className="ed" style={{ borderColor: 'var(--line-2)' }}>
+              <div className="fld">
+                <label>Название (узб.)</label>
+                <input value={c.name} onChange={(e) => edit((m) => (m.combos![i].name = e.target.value))} />
+              </div>
+              <div className="fld">
+                <label>Название (рус.)</label>
+                <input value={c.ru} onChange={(e) => edit((m) => (m.combos![i].ru = e.target.value))} />
+              </div>
+              <div className="fld">
+                <label>Описание (узб.)</label>
+                <input value={c.descUz || ''} onChange={(e) => edit((m) => (m.combos![i].descUz = e.target.value))} />
+              </div>
+              <div className="fld">
+                <label>Описание (рус.)</label>
+                <input value={c.desc || ''} onChange={(e) => edit((m) => (m.combos![i].desc = e.target.value))} />
+              </div>
+              <div className="fld full">
+                <label>Состав сета</label>
+                {c.items.map((it, j) => (
+                  <div key={j} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6, flexWrap: 'wrap' }}>
+                    <select value={it.id} onChange={(e) => edit((m) => (m.combos![i].items[j] = { id: e.target.value, si: 0, qty: it.qty }))} style={{ flex: '1 1 200px' }}>
+                      {menu.dishes.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} · {d.ru}
+                        </option>
+                      ))}
+                    </select>
+                    {(menu.dishes.find((d) => d.id === it.id)?.sizes.length ?? 0) > 1 && (
+                      <select value={it.si} onChange={(e) => edit((m) => (m.combos![i].items[j].si = +e.target.value))}>
+                        {menu.dishes.find((d) => d.id === it.id)!.sizes.map((sz, k) => (
+                          <option key={k} value={k}>
+                            {sz.label}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <input inputMode="numeric" value={String(it.qty)} style={{ width: 60 }} onChange={(e) => edit((m) => (m.combos![i].items[j].qty = Math.max(1, Math.min(50, +e.target.value.replace(/\D/g, '') || 1))))} aria-label="Количество" />
+                    <button type="button" className="link" onClick={() => edit((m) => m.combos![i].items.splice(j, 1))} disabled={c.items.length < 2}>
+                      убрать
+                    </button>
+                  </div>
+                ))}
+                <span className="cap">{c.items.map((it) => `${dishName(it.id)} ×${it.qty}`).join(', ')}</span>
+                <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+                  <button type="button" className="btn ghost sm" onClick={() => edit((m) => m.combos![i].items.push({ id: menu.dishes[0]?.id || '', si: 0, qty: 1 }))}>
+                    Добавить блюдо
+                  </button>
+                  <button type="button" className={`chk ${c.active !== false ? 'on' : ''}`} onClick={() => edit((m) => (m.combos![i].active = !(c.active !== false)))}>
+                    {c.active !== false ? 'Показывается' : 'Скрыт'}
+                  </button>
+                  <button type="button" className="link" style={{ color: 'var(--err)' }} onClick={() => edit((m) => m.combos!.splice(i, 1))}>
+                    Удалить сет
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          className="btn ghost"
+          style={{ marginTop: 12 }}
+          onClick={() => edit((m) => (m.combos = [...(m.combos ?? []), { id: 'c' + Date.now().toString(36), name: 'Yangi toʻplam', ru: 'Новый сет', items: [{ id: menu.dishes[0]?.id || '', si: 0, qty: 1 }], active: false }]))}
+        >
+          Добавить сет
+        </button>
+      </div>
+
+      <div className="card" style={{ gridColumn: '1/-1' }}>
+        <h3 style={{ fontSize: 28, marginBottom: 6 }}>Промокоды</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          Скидка на блюда (без доставки). Проверяется на сервере; список кодов гостям не виден. За столом промокоды не применяются.
+        </p>
+        <div className="dlist">
+          {(s.promos ?? []).map((p, i) => (
+            <div key={i} className="drow" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))' }}>
+              <div className="fld">
+                <label>Код</label>
+                <input value={p.code} onChange={(e) => editS((x) => (x.promos![i].code = e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '')))} />
+              </div>
+              <div className="fld">
+                <label>Скидка, %</label>
+                <input inputMode="numeric" value={String(p.pct || '')} onChange={(e) => editS((x) => ((x.promos![i].pct = Math.min(90, +e.target.value.replace(/\D/g, '') || 0)), x.promos![i].pct && (x.promos![i].fixed = 0)))} />
+              </div>
+              <div className="fld">
+                <label>или сумма, сум</label>
+                <input inputMode="numeric" value={String(p.fixed || '')} onChange={(e) => editS((x) => ((x.promos![i].fixed = +e.target.value.replace(/\D/g, '') || 0), x.promos![i].fixed && (x.promos![i].pct = 0)))} />
+              </div>
+              <div className="fld">
+                <label>От суммы, сум</label>
+                <input inputMode="numeric" value={String(p.min || '')} onChange={(e) => editS((x) => (x.promos![i].min = +e.target.value.replace(/\D/g, '') || 0))} />
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
+                <button type="button" className={`chk ${p.active ? 'on' : ''}`} onClick={() => editS((x) => (x.promos![i].active = !p.active))}>
+                  {p.active ? 'Действует' : 'Выключен'}
+                </button>
+                <button type="button" className="link" style={{ color: 'var(--err)' }} onClick={() => editS((x) => x.promos!.splice(i, 1))}>
+                  Удалить
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button className="btn ghost" style={{ marginTop: 12 }} onClick={() => editS((x) => (x.promos = [...(x.promos ?? []), { code: 'MANGO10', pct: 10, fixed: 0, min: 0, active: false }]))}>
+          Добавить промокод
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CatsTab({ menu, edit }: { menu: Menu; edit: (fn: (m: Menu) => void) => void }) {
   return (
     <>
@@ -470,12 +640,19 @@ function CatsTab({ menu, edit }: { menu: Menu; edit: (fn: (m: Menu) => void) => 
           return (
             <div className="drow" key={c.id} style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr) auto' }}>
               <div className="fld">
-                <label>Название</label>
+                <label>Название (узб.)</label>
                 <input value={c.name} onChange={(e) => edit((m) => (m.cats[i].name = e.target.value))} />
               </div>
               <div className="fld">
-                <label>Подпись по-русски</label>
+                <label>Название по-русски</label>
                 <input value={c.ru} onChange={(e) => edit((m) => (m.cats[i].ru = e.target.value))} />
+                <select value={c.theme || 'pom'} onChange={(e) => edit((m) => (m.cats[i].theme = e.target.value))} style={{ marginTop: 6 }}>
+                  {THEMES.map(([k, l]) => (
+                    <option key={k} value={k}>
+                      Оформление: {l}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 <button className="btn ghost sm" disabled={!i} aria-label="Выше" onClick={() => edit((m) => ([m.cats[i - 1], m.cats[i]] = [m.cats[i], m.cats[i - 1]]))}>
@@ -526,10 +703,14 @@ function SettingsTab({ s, edit, toast, menuCats }: { s: Settings; edit: (fn: (s:
       <div className="card form" style={{ gridTemplateColumns: '1fr' }}>
         {f('name', 'Название бренда')}
         {f('tagline', 'Слоган')}
+        {f('taglineUz', 'Слоган по-узбекски')}
         {f('phone', 'Телефон для заказов', '+998 ...')}
         {f('city', 'Город')}
+        {f('cityUz', 'Город по-узбекски', 'Yangiyoʻl, Toshkent viloyati')}
         {f('address', 'Адрес', 'Улица, дом, ориентир')}
+        {f('addressUz', 'Адрес по-узбекски')}
         {f('hours', 'Часы работы', 'Например: ежедневно 10:00–23:00')}
+        {f('hoursUz', 'Часы работы по-узбекски', '9:00–23:00, juma — dam olish kuni')}
         {f('mapUrl', 'Ссылка на карту', 'https://maps.google.com/... или yandex')}
         {f('instagram', 'Instagram', '@account')}
         {f('telegram', 'Telegram', '@account')}
@@ -562,8 +743,8 @@ function SettingsTab({ s, edit, toast, menuCats }: { s: Settings; edit: (fn: (s:
           <input inputMode="numeric" value={String(s.deliveryMinutes ?? 20)} onChange={(e) => edit((x) => (x.deliveryMinutes = Math.min(240, +e.target.value.replace(/\D/g, '') || 0)))} />
         </div>
         <div className="fld">
-          <label>Зоны доставки: название | цена доставки | минимальный заказ</label>
-          <textarea rows={4} defaultValue={lines(s.zones, (z) => `${z.name} | ${z.fee} | ${z.min}`)} onChange={(e) => edit((x) => (x.zones = parseLines(e.target.value, ['name', 'fee', 'min'])))} />
+          <label>Зоны доставки: название | цена доставки | минимальный заказ | название по-узбекски</label>
+          <textarea rows={4} defaultValue={lines(s.zones, (z) => `${z.name} | ${z.fee} | ${z.min}${z.uz ? ' | ' + z.uz : ''}`)} onChange={(e) => edit((x) => (x.zones = parseLines(e.target.value, ['name', 'fee', 'min', 'uz'])))} />
         </div>
         <div className="alert" style={{ fontSize: 13 }}>
           Зоны и суммы стоят примерные. Замените их на свои перед запуском.

@@ -1,82 +1,34 @@
-import Link from 'next/link';
-import { getMenu, getSettings } from '@/lib/data';
-import { orderSummaryText } from '@/lib/copy';
+import { getMenu } from '@/lib/data';
+import { publicMenu } from '@/lib/promo';
 import Hero from '@/components/Hero';
 import LiveGastronomy from '@/components/LiveGastronomy';
-import { DishObj, DishRow } from '@/components/Dish';
+import { Combos, Featured, FreshChapter, GrillChapter, Moods, OrderBand } from '@/components/Home';
 
-const SPREAD = [
-  ['sp-a', 'r4'],
-  ['sp-b', ''],
-  ['sp-c', 'wide'],
-  ['sp-d', 'r4'],
-  ['sp-e', 'wide'],
-];
+/* Hero spread: the dominant plate is the first featured dish with a photo; around it photos first,
+   then drawn plates from other categories so the spread shows the breadth of the menu. */
+const AROUND = ['d5', 'd4', 'd7', 'd18', 'd10', 'd8', 'g5', 'b1'];
 
 export default async function Home() {
-  const [menu, s] = await Promise.all([getMenu(), getSettings()]);
-  const visible = menu.dishes.filter((d) => menu.cats.some((c) => c.id === d.cat));
-  const hero = visible.find((d) => d.featured && d.photo) ?? visible.find((d) => d.photo) ?? visible[0];
-  const feat = visible.filter((d) => d.featured && d.photo).slice(0, 5);
-  const favs = visible.filter((d) => d.featured && !d.photo).slice(0, 6);
+  const menu = publicMenu(await getMenu());
+  const visible = menu.dishes.filter((d) => d.available && menu.cats.some((c) => c.id === d.cat));
+  const main = visible.find((d) => d.featured && d.photo && d.cat === 'grill') ?? visible.find((d) => d.photo) ?? visible[0];
+  const rest = visible.filter((d) => d !== main);
+  const pick = [...AROUND.map((id) => rest.find((d) => d.id === id)).filter(Boolean), ...rest.filter((d) => d.featured)] as typeof visible;
+  const seen = new Set<string>();
+  const around = pick.filter((d) => (seen.has(d.id) ? false : (seen.add(d.id), true))).slice(0, 5);
+  // keep photos in the big slots
+  around.sort((a, b) => Number(!!b.photo) - Number(!!a.photo));
 
   return (
     <>
-      <Hero s={s} dish={hero} />
+      <Hero dishes={main ? [main, ...around] : around} />
+      <Moods />
+      <GrillChapter />
       <LiveGastronomy />
-
-      <section className="sec g">
-        <div className="in">
-          <div className="head rv">
-            <h2>
-              Блюда, ради <em>которых</em> возвращаются
-            </h2>
-            <p>Выбор шефа и самые заказываемые блюда. Нажмите на фото, чтобы увидеть состав, размеры порций и добавки.</p>
-          </div>
-          <div className="spread">
-            {feat.length ? (
-              feat.map((d, i) => <DishObj key={d.id} d={d} className={`${SPREAD[i][0]} rv`} ph={SPREAD[i][1]} />)
-            ) : (
-              <p className="muted">Отметьте блюда «На главной» в управлении меню.</p>
-            )}
-          </div>
-          {favs.length > 0 && (
-            <div className="favs rv">
-              <div className="kicker" style={{ marginBottom: 6 }}>Ещё из любимого</div>
-              <div className="ledger">
-                {favs.map((d) => (
-                  <DishRow key={d.id} d={d} />
-                ))}
-              </div>
-            </div>
-          )}
-          <div style={{ marginTop: 56, display: 'flex', justifyContent: 'center' }}>
-            <Link className="btn ghost" href="/menu">
-              Всё меню
-            </Link>
-          </div>
-        </div>
-      </section>
-
-
-      <section className="sec g">
-        <div className="in">
-          <div className="head rv">
-            <h2>
-              С собой <em>или</em> домой
-            </h2>
-            <p>{orderSummaryText(s)}</p>
-          </div>
-          <div className="ctas" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <Link className="btn" href="/menu">
-              Собрать заказ
-            </Link>
-            <Link className="btn ghost" href="/contacts">
-              Зоны доставки
-            </Link>
-          </div>
-        </div>
-      </section>
+      <Featured />
+      <FreshChapter />
+      <Combos />
+      <OrderBand />
     </>
   );
 }

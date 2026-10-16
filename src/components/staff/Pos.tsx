@@ -236,6 +236,12 @@ export default function Pos() {
                   <span className="num">{fmt(cur.fee)}</span>
                 </div>
               )}
+              {(cur.discount ?? 0) > 0 && (
+                <div>
+                  <span>Скидка {cur.promo}</span>
+                  <span className="num">−{fmt(cur.discount!)}</span>
+                </div>
+              )}
               <div className="big">
                 <span>Итого</span>
                 <span className="num">{fmt(cur.total)} сум</span>

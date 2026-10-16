@@ -6,10 +6,23 @@ import { useSite } from './Providers';
 import { StarMark } from './Girih';
 
 const NAV = [
-  ['/menu', 'Меню'],
-  ['/story', 'Больше, чем еда'],
-  ['/contacts', 'Контакты'],
+  ['/menu', 'nav.menu'],
+  ['/story', 'nav.story'],
+  ['/contacts', 'nav.contacts'],
 ] as const;
+
+export function LangSwitch({ className = '' }: { className?: string }) {
+  const { lang, setLang, t } = useSite();
+  return (
+    <div className={`lang ${className}`} role="group" aria-label={t('lang.label')}>
+      {(['uz', 'ru'] as const).map((l) => (
+        <button key={l} type="button" className={lang === l ? 'on' : ''} aria-pressed={lang === l} onClick={() => lang !== l && setLang(l)}>
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function useBump(bump: number) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -24,7 +37,7 @@ function useBump(bump: number) {
 }
 
 export function Header() {
-  const { settings, count, bump } = useSite();
+  const { settings, count, bump, t } = useSite();
   const path = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const n = useBump(bump);
@@ -37,22 +50,23 @@ export function Header() {
   return (
     <header className={`mast g ${scrolled ? 'scrolled' : ''}`}>
       <div className="in">
-        <Link className="logo" href="/" aria-label="На главную">
-          <StarMark style={{ color: 'var(--saffron)', width: 30, height: 30 }} />
+        <Link className="logo" href="/" aria-label={t('nav.toHome')}>
+          <StarMark style={{ color: 'var(--saffron)', width: 32, height: 32 }} />
           <span>
             <b>{settings.name}</b>
             <small>milliy taomlar · Yangiyul</small>
           </span>
         </Link>
-        <nav className="nav" aria-label="Разделы">
+        <nav className="nav" aria-label={t('nav.sections')}>
           {NAV.map(([href, l]) => (
             <Link key={href} href={href} className={path === href ? 'on' : ''} aria-current={path === href ? 'page' : undefined}>
-              {l}
+              {t(l)}
             </Link>
           ))}
         </nav>
-        <Link className="cartbtn" href="/cart" aria-label={`Корзина, ${count} позиций`}>
-          Корзина{' '}
+        <LangSwitch />
+        <Link className="cartbtn" href="/cart" aria-label={t('cart.aria', { n: count })} data-cart-target>
+          {t('nav.cart')}{' '}
           <span className="n num" ref={n}>
             {count}
           </span>
@@ -63,29 +77,29 @@ export function Header() {
 }
 
 export function TabBar() {
-  const { count, bump } = useSite();
+  const { count, bump, t } = useSite();
   const path = usePathname();
   const n = useBump(bump);
   const cls = (p: string) => (path === p ? 'on' : '');
   return (
-    <nav className="tabbar" aria-label="Навигация">
+    <nav className="tabbar" aria-label={t('nav.sections')}>
       <Link href="/" className={cls('/')}>
         <StarMark style={{ width: 22, height: 22 }} />
-        Главная
+        {t('nav.home')}
       </Link>
       <Link href="/menu" className={cls('/menu')}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
           <path d="M5 4h14M5 9h14M5 14h9M5 19h7" />
         </svg>
-        Меню
+        {t('nav.menu')}
       </Link>
-      <Link href="/cart" className={cls('/cart')}>
+      <Link href="/cart" className={cls('/cart')} data-cart-target>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
           <path d="M4 6h2l2 11h10l2-8H7" />
           <circle cx="10" cy="20" r="1.2" />
           <circle cx="17" cy="20" r="1.2" />
         </svg>
-        Корзина
+        {t('nav.cart')}
         <span className="n num" ref={n} hidden={!count}>
           {count}
         </span>
@@ -95,7 +109,7 @@ export function TabBar() {
           <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
           <circle cx="12" cy="9.5" r="2.5" />
         </svg>
-        Контакты
+        {t('nav.contacts')}
       </Link>
     </nav>
   );

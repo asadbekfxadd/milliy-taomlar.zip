@@ -89,7 +89,12 @@ CREATE TABLE IF NOT EXISTS payments (
   cancel_time  bigint NOT NULL DEFAULT 0,
   UNIQUE (provider, ext_id)
 );
-CREATE INDEX IF NOT EXISTS payments_order_idx ON payments (order_id);`;
+CREATE INDEX IF NOT EXISTS payments_order_idx ON payments (order_id);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo     text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_pct numeric NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_fixed integer NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount  integer NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS lang      text NOT NULL DEFAULT 'ru';`;
 
 function ready() {
   if (!g.pgReady)
@@ -117,6 +122,7 @@ export type OrderRow = {
   tgMessageId: number | null; createdAt: string;
   source: string; tableNo: number | null; guests: number; waiter: string; service: number; paidWith: string; paidAt: string | null;
   payStatus: string; acceptedAt: string | null; etaAt: string | null; customerChat: number | null;
+  promo: string; promoPct: number; promoFixed: number; discount: number; lang: string;
 };
 export const mapOrder = (r: any): OrderRow => ({
   id: r.id, no: r.no, token: r.token, status: r.status, type: r.type, zone: r.zone, fee: r.fee, address: r.address,
@@ -126,6 +132,7 @@ export const mapOrder = (r: any): OrderRow => ({
   paidWith: r.paid_with ?? '', paidAt: r.paid_at ? new Date(r.paid_at).toISOString() : null,
   payStatus: r.pay_status ?? 'unpaid', acceptedAt: r.accepted_at ? new Date(r.accepted_at).toISOString() : null,
   etaAt: r.eta_at ? new Date(r.eta_at).toISOString() : null, customerChat: r.customer_chat ? Number(r.customer_chat) : null,
+  promo: r.promo ?? '', promoPct: Number(r.promo_pct ?? 0), promoFixed: r.promo_fixed ?? 0, discount: r.discount ?? 0, lang: r.lang ?? 'ru',
 });
 
 export async function getOrder(id: string) {

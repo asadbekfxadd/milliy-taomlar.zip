@@ -20,6 +20,8 @@ export type StaffOrder = {
   items: OrderItem[];
   subtotal: number;
   service: number;
+  discount?: number;
+  promo?: string;
   total: number;
   paidWith: string;
   createdAt: string;

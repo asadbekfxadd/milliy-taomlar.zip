@@ -21,6 +21,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     fee: o.fee,
     items: o.items,
     subtotal: o.subtotal,
+    discount: o.discount,
+    promo: o.promo,
     total: o.total,
     createdAt: o.createdAt,
     pay: o.pay,

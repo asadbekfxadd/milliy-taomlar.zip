@@ -1,12 +1,15 @@
-export type Size = { label: string; w: string; p: number };
-export type Extra = { label: string; p: number };
+/* Texts are stored in Russian (`label`, `desc`, …) with optional Uzbek twins (`uz`, `descUz`, …). */
+export type Size = { label: string; w: string; p: number; uz?: string };
+export type Extra = { label: string; p: number; uz?: string };
 export type Dish = {
   id: string;
   cat: string;
   name: string;
   ru: string;
   desc: string;
+  descUz?: string;
   ingr: string[];
+  ingrUz?: string[];
   allergens: string[];
   weight: string;
   price: number;
@@ -17,10 +20,19 @@ export type Dish = {
   extras: Extra[];
   available: boolean;
   featured: boolean;
+  /** "Bugun nima yeymiz?" moods: hearty, light, family, friends, quick */
+  moods?: string[];
+  /** grill dishes sold per skewer: the card shows a skewer counter */
+  skewer?: boolean;
+  /** not shown to guests at all (e.g. a dish the restaurant may not serve) */
+  hidden?: boolean;
 };
-export type Cat = { id: string; name: string; ru: string };
-export type Menu = { cats: Cat[]; dishes: Dish[] };
-export type Zone = { name: string; fee: number; min: number };
+export type Cat = { id: string; name: string; ru: string; theme?: string };
+export type ComboItem = { id: string; si: number; qty: number };
+export type Combo = { id: string; name: string; ru: string; descUz?: string; desc?: string; items: ComboItem[]; active?: boolean };
+export type Menu = { cats: Cat[]; dishes: Dish[]; combos?: Combo[]; v?: number };
+export type Zone = { name: string; fee: number; min: number; uz?: string };
+export type Promo = { code: string; pct: number; fixed: number; min: number; active: boolean };
 export type Settings = {
   name: string;
   tagline: string;
@@ -39,6 +51,12 @@ export type Settings = {
   pay: { cash: boolean; card: boolean };
   story: string[];
   storyPhotos: string[];
+  /* Uzbek versions of the guest-facing texts */
+  taglineUz?: string;
+  cityUz?: string;
+  addressUz?: string;
+  hoursUz?: string;
+  promos?: Promo[];
   /* POS */
   tables: number;
   servicePct: number;
@@ -70,6 +88,8 @@ export type PublicOrder = {
   fee: number;
   items: OrderItem[];
   subtotal: number;
+  discount?: number;
+  promo?: string;
   total: number;
   createdAt: string;
 };

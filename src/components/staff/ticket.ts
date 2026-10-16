@@ -65,6 +65,7 @@ export function ticketHtml(job: { kind: string; station: string; body: any }, pa
         <tr><td>Блюда</td><td class="r">${fmt(b.subtotal)}</td></tr>
         ${b.service ? `<tr><td>Обслуживание ${esc(b.servicePct)}%</td><td class="r">${fmt(b.service)}</td></tr>` : ''}
         ${b.fee ? `<tr><td>Доставка</td><td class="r">${fmt(b.fee)}</td></tr>` : ''}
+        ${b.discount ? `<tr><td>Скидка ${esc(b.promo || '')}</td><td class="r">−${fmt(b.discount)}</td></tr>` : ''}
         <tr><td class="l">ИТОГО</td><td class="r l">${fmt(b.total)} сум</td></tr>
         ${job.kind !== 'precheck' && b.pay ? `<tr><td>Оплата</td><td class="r">${esc(PAY_RU[b.pay] || b.pay)}</td></tr>` : ''}
       </table>

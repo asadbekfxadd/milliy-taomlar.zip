@@ -4,57 +4,62 @@ import Link from 'next/link';
 import type { PublicOrder } from '@/lib/types';
 import { fmt } from '@/lib/format';
 import { useSite } from './Providers';
+import type { Key, T } from '@/lib/i18n';
 
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('ru-RU', { timeZone: 'Asia/Tashkent', hour: '2-digit', minute: '2-digit' });
 const PROVIDER: Record<string, string> = { payme: 'Payme', click: 'Click' };
 
-function steps(o: PublicOrder) {
+function steps(o: PublicOrder, t: T) {
   return [
-    ['new', 'Получен'],
-    ['accepted', 'Принят'],
-    ['cooking', 'Готовится'],
-    ['ready', o.type === 'delivery' ? 'Курьер в пути' : o.type === 'pickup' ? 'Готов к выдаче' : 'Выносим'],
-    ['done', o.type === 'delivery' ? 'Доставлен' : 'Выдан'],
+    ['new', t('ord.s.new')],
+    ['accepted', t('ord.s.accepted')],
+    ['cooking', t('ord.s.cooking')],
+    ['ready', o.type === 'delivery' ? t('ord.s.readyDel') : o.type === 'pickup' ? t('ord.s.readyPick') : t('ord.s.readyHall')],
+    ['done', o.type === 'delivery' ? t('ord.s.doneDel') : t('ord.s.done')],
   ] as const;
 }
 
-function headline(o: PublicOrder): [string, string] {
-  if (o.status === 'cancelled') return ['Заказ', 'отменён'];
-  if (o.payStatus === 'pending' || o.payStatus === 'failed') return ['Ожидаем', 'оплату'];
-  switch (o.status) {
-    case 'new':
-      return ['Заказ', 'получен'];
-    case 'accepted':
-      return ['Заказ', 'принят'];
-    case 'cooking':
-      return ['Уже', 'готовим'];
-    case 'ready':
-      return o.type === 'delivery' ? ['Курьер', 'в пути'] : ['Заказ', 'готов'];
-    default:
-      return ['Приятного', 'аппетита'];
-  }
+function headline(o: PublicOrder, t: T): [string, string] {
+  const k: Key =
+    o.status === 'cancelled'
+      ? 'ord.h.cancel'
+      : o.payStatus === 'pending' || o.payStatus === 'failed'
+        ? 'ord.h.pay'
+        : o.status === 'new'
+          ? 'ord.h.new'
+          : o.status === 'accepted'
+            ? 'ord.h.accepted'
+            : o.status === 'cooking'
+              ? 'ord.h.cooking'
+              : o.status === 'ready'
+                ? o.type === 'delivery'
+                  ? 'ord.h.courier'
+                  : 'ord.h.ready'
+                : 'ord.h.done';
+  const [a, b] = t(k).split('|');
+  return [a, b ?? ''];
 }
 
-function note(o: PublicOrder) {
-  if (o.status === 'cancelled') return o.payStatus === 'refunded' ? 'Заказ отменён, деньги вернутся на карту.' : 'Ресторан отменил заказ. Если это ошибка, позвоните нам.';
-  if (o.payStatus === 'pending') return 'Заказ уйдёт на кухню сразу после оплаты.';
-  if (o.payStatus === 'failed') return 'Оплата не прошла. Попробуйте ещё раз или выберите оплату при получении, позвонив нам.';
+function note(o: PublicOrder, t: T) {
+  if (o.status === 'cancelled') return o.payStatus === 'refunded' ? t('ord.n.refunded') : t('ord.n.cancelled');
+  if (o.payStatus === 'pending') return t('ord.n.pending');
+  if (o.payStatus === 'failed') return t('ord.n.failed');
   switch (o.status) {
     case 'new':
-      return 'Ресторан получил заказ и скоро подтвердит его.';
+      return t('ord.n.new');
     case 'accepted':
-      return 'Кухня приняла заказ.';
+      return t('ord.n.accepted');
     case 'cooking':
-      return 'Повар уже готовит.';
+      return t('ord.n.cooking');
     case 'ready':
-      return o.type === 'delivery' ? 'Заказ передан курьеру.' : o.type === 'pickup' ? 'Можно забирать!' : 'Официант уже несёт.';
+      return o.type === 'delivery' ? t('ord.n.readyDel') : o.type === 'pickup' ? t('ord.n.readyPick') : t('ord.n.readyHall');
     default:
-      return 'Спасибо, что выбрали нас!';
+      return t('ord.n.done');
   }
 }
 
 export default function OrderStatus({ id, token }: { id: string; token: string }) {
-  const { settings: st } = useSite();
+  const { settings: st, t } = useSite();
   const [o, setO] = useState<PublicOrder | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [perm, setPerm] = useState<string>('default');
@@ -68,13 +73,13 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
   }, []);
 
   useEffect(() => {
-    let t: ReturnType<typeof setTimeout>;
+    let tm: ReturnType<typeof setTimeout>;
     let alive = true;
     const load = async () => {
       try {
         const r = await fetch(`/api/orders/${id}?t=${encodeURIComponent(token)}`, { cache: 'no-store' });
         if (r.status === 404) {
-          setErr('Заказ не найден. Проверьте ссылку.');
+          setErr(t('ord.notFoundText'));
           return;
         }
         const j: PublicOrder = await r.json();
@@ -86,19 +91,20 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
         setErr(null);
         if (j.status === 'done' || j.status === 'cancelled') return;
       } catch {
-        setErr('Нет связи. Пробуем снова…');
+        setErr(t('ord.offline'));
       }
-      if (alive) t = setTimeout(load, document.visibilityState === 'visible' ? 5000 : 15000);
+      if (alive) tm = setTimeout(load, document.visibilityState === 'visible' ? 5000 : 15000);
     };
     load();
     return () => {
       alive = false;
-      clearTimeout(t);
+      clearTimeout(tm);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, token]);
 
   function alertGuest(j: PublicOrder) {
-    const [a, b] = headline(j);
+    const [a, b] = headline(j, t);
     try {
       navigator.vibrate?.([200, 100, 200]);
     } catch {}
@@ -113,7 +119,7 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
       osc.stop(ctx.currentTime + 0.4);
     } catch {}
     try {
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification(`${st.name}: ${a} ${b}`, { body: note(j), tag: 'order-' + j.id });
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification(`${st.name}: ${a} ${b}`, { body: note(j, t), tag: 'order-' + j.id });
     } catch {}
   }
 
@@ -121,8 +127,8 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
     return (
       <section className="masthead g">
         <div className="in">
-          <div className="kicker">Заказ</div>
-          <h1 style={{ fontSize: 'clamp(56px,9vw,140px)' }}>{err ? 'Не найден' : 'Загружаем…'}</h1>
+          <div className="kicker">{t('cart.kicker')}</div>
+          <h1 style={{ fontSize: 'clamp(56px,9vw,140px)' }}>{err ? t('ord.notFound') : t('ord.loading')}</h1>
           {err && (
             <div className="alert err" style={{ marginTop: 20, maxWidth: 640 }}>
               {err}
@@ -132,11 +138,11 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
       </section>
     );
 
-  const S = steps(o);
+  const S = steps(o, t);
   const idx = S.findIndex((s) => s[0] === o.status);
   const cancelled = o.status === 'cancelled';
   const waitingPay = o.payStatus === 'pending' || o.payStatus === 'failed';
-  const [h1a, h1b] = headline(o);
+  const [h1a, h1b] = headline(o, t);
   const left = o.etaAt ? Math.round((new Date(o.etaAt).getTime() - Date.now()) / 60000) : null;
   const showEta = o.etaAt && ['accepted', 'cooking'].includes(o.status);
 
@@ -144,7 +150,7 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
     <>
       <section className="masthead g">
         <div className="in">
-          <div className="kicker">Заказ № {o.no}</div>
+          <div className="kicker">{t('ord.kicker', { n: o.no })}</div>
           <h1 style={{ fontSize: 'clamp(56px,9vw,140px)' }}>
             {h1a} <em>{h1b}</em>
           </h1>
@@ -154,14 +160,14 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
         <div className="in" style={{ maxWidth: 860, margin: '0 auto', paddingBottom: 120 }}>
           {showEta && (
             <div className="eta">
-              <span className="kicker">{o.type === 'delivery' ? 'Привезём примерно к' : 'Будет готов примерно к'}</span>
+              <span className="kicker">{o.type === 'delivery' ? t('ord.etaDel') : t('ord.eta')}</span>
               <b className="num">{clock(o.etaAt!)}</b>
-              <span className="muted">{left !== null && left > 0 ? `осталось около ${left} мин` : 'совсем скоро'}</span>
+              <span className="muted">{left !== null && left > 0 ? t('ord.left', { m: left }) : t('ord.soon')}</span>
             </div>
           )}
 
           {!waitingPay && (
-            <div className="status" aria-label="Статус заказа">
+            <div className="status" aria-label={t('ord.statusAria')}>
               {S.map((s, i) => (
                 <div key={s[0]} className={cancelled ? (i === 0 ? 'x' : '') : i <= idx ? 'on' : ''}>
                   {s[1]}
@@ -171,44 +177,44 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
           )}
 
           <div className={`alert ${cancelled || o.payStatus === 'failed' ? 'err' : waitingPay ? 'warn' : 'ok'}`} role="status" aria-live="polite">
-            {note(o)}
+            {note(o, t)}
           </div>
 
           {o.payUrl && waitingPay && (
             <a className="btn" href={o.payUrl} style={{ marginTop: 16, width: '100%' }}>
-              Оплатить {fmt(o.total)} сум через {PROVIDER[o.pay]}
+              {t('ord.payBtn', { s: fmt(o.total), p: PROVIDER[o.pay] })}
             </a>
           )}
-          {o.payStatus === 'paid' && <p className="cap" style={{ marginTop: 12 }}>✓ Оплачено онлайн через {PROVIDER[o.pay] || o.pay}</p>}
+          {o.payStatus === 'paid' && <p className="cap" style={{ marginTop: 12 }}>{t('ord.paid', { p: PROVIDER[o.pay] || o.pay })}</p>}
 
           {!cancelled && o.status !== 'done' && (o.tgLink || (typeof Notification !== 'undefined' && perm !== 'denied')) && (
             <div className="notify">
-              <b>Сообщить, когда будет готово?</b>
+              <b>{t('ord.notifyQ')}</b>
               <div className="notify-row">
                 {o.tgLink &&
                   (o.tgLinked ? (
-                    <span className="chip-ok">✓ Уведомления в Telegram включены</span>
+                    <span className="chip-ok">{t('ord.tgOn')}</span>
                   ) : (
                     <a className="btn ghost sm" href={o.tgLink} target="_blank" rel="noopener">
-                      Уведомления в Telegram
+                      {t('ord.tg')}
                     </a>
                   ))}
                 {typeof Notification !== 'undefined' &&
                   (perm === 'granted' ? (
-                    <span className="chip-ok">✓ Звук и уведомление на этом телефоне</span>
+                    <span className="chip-ok">{t('ord.pushOn')}</span>
                   ) : perm !== 'denied' ? (
                     <button className="btn ghost sm" onClick={() => Notification.requestPermission().then(setPerm)}>
-                      Уведомлять на этом телефоне
+                      {t('ord.push')}
                     </button>
                   ) : null)}
               </div>
-              <span className="cap">Статус на этой странице обновляется сам.</span>
+              <span className="cap">{t('ord.auto')}</span>
             </div>
           )}
 
           {st.phone && (
             <p className="muted" style={{ fontSize: 14 }}>
-              Вопросы по заказу:{' '}
+              {t('ord.q')}{' '}
               <a href={`tel:${st.phone.replace(/[^\d+]/g, '')}`} className="num" style={{ color: 'var(--cream)' }}>
                 {st.phone}
               </a>
@@ -221,23 +227,37 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
                   {i.name}
                   {i.mods ? ' · ' + i.mods : ''} × {i.qty}
                 </span>
-                <span className="num">{fmt(i.sum)} сум</span>
+                <span className="num">
+                  {fmt(i.sum)} {t('sum')}
+                </span>
               </div>
             ))}
             {o.fee > 0 && (
               <div>
-                <span>Доставка</span>
-                <span className="num">{fmt(o.fee)} сум</span>
+                <span>{t('ord.fee')}</span>
+                <span className="num">
+                  {fmt(o.fee)} {t('sum')}
+                </span>
+              </div>
+            )}
+            {(o.discount ?? 0) > 0 && (
+              <div>
+                <span>
+                  {t('ord.discount')} {o.promo}
+                </span>
+                <span className="num">
+                  −{fmt(o.discount!)} {t('sum')}
+                </span>
               </div>
             )}
             <div className="t">
-              <span>Итого</span>
+              <span>{t('ord.total')}</span>
               <span className="num">{fmt(o.total)}</span>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <Link className="btn" href="/menu">
-              Заказать ещё
+              {t('ord.again')}
             </Link>
           </div>
         </div>

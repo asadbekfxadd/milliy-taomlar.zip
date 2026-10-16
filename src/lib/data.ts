@@ -1,19 +1,42 @@
 import 'server-only';
 import { unstable_noStore as noStore } from 'next/cache';
-import { loadDoc } from './db';
-import { D, DEFAULT_CATS, DEFAULT_DISHES, DEFAULT_SETTINGS } from './defaults';
+import { loadDoc, saveDoc } from './db';
+import { D, DEFAULT_CATS, DEFAULT_COMBOS, DEFAULT_DISHES, DEFAULT_SETTINGS, LEGACY_IDS, MENU_VERSION } from './defaults';
 import type { Menu, Settings } from './types';
 import { providers } from './payments';
+
+const defaultMenu = (): Menu => ({ cats: DEFAULT_CATS, dishes: DEFAULT_DISHES, combos: DEFAULT_COMBOS, v: MENU_VERSION });
+
+/* A menu saved before v2 that still holds only the stock example dishes (no own dishes, no uploaded photos)
+   is replaced by the new default once; the old one is kept as `menu_backup_v1`. */
+async function upgrade(m: Menu): Promise<Menu> {
+  const untouched = m.dishes.every((d) => LEGACY_IDS.has(d.id) && (!d.photo || /^https:\/\/images\.unsplash\.com\//.test(d.photo)));
+  if (untouched) {
+    try {
+      await saveDoc('menu_backup_v1', m);
+      await saveDoc('menu', defaultMenu());
+      console.log('menu: upgraded stock menu to v' + MENU_VERSION);
+    } catch (e) {
+      console.error('menu upgrade failed', e);
+    }
+    return defaultMenu();
+  }
+  // edited by the owner: keep everything, only add the new combos block
+  return { ...m, combos: m.combos ?? DEFAULT_COMBOS.filter((c) => c.items.every((i) => m.dishes.some((d) => d.id === i.id))), v: MENU_VERSION };
+}
 
 export async function getMenu(): Promise<Menu> {
   noStore();
   try {
-    const m = await loadDoc<Menu>('menu');
-    if (m?.cats && m?.dishes) return { cats: m.cats, dishes: m.dishes.map((d) => D(d)) };
+    let m = await loadDoc<Menu>('menu');
+    if (m?.cats && m?.dishes) {
+      if ((m.v ?? 1) < MENU_VERSION) m = await upgrade(m);
+      return { cats: m.cats, dishes: m.dishes.map((d) => D(d)), combos: m.combos ?? [], v: m.v };
+    }
   } catch (e) {
     console.error('getMenu: falling back to defaults', e);
   }
-  return { cats: DEFAULT_CATS, dishes: DEFAULT_DISHES };
+  return defaultMenu();
 }
 
 export async function getSettings(): Promise<Settings> {

@@ -24,20 +24,26 @@ export const orderInput = z.object({
   note: str(500).optional().default(''),
   when: z.union([z.literal('asap'), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)]),
   pay: z.enum(['cash', 'card', 'payme', 'click']),
+  promo: z.string().trim().max(24).optional().default(''),
   website: z.string().optional(), // honeypot, must stay empty
 });
 
 export const statusInput = z.object({ status: z.enum(['new', 'accepted', 'cooking', 'ready', 'done', 'cancelled']) });
 
-const size = z.object({ label: str(80), w: str(40).default(''), p: money });
-const extra = z.object({ label: str(80), p: money });
+const size = z.object({ label: str(80), uz: str(80).optional(), w: str(40).default(''), p: money });
+const extra = z.object({ label: str(80), uz: str(80).optional(), p: money });
 export const dishSchema = z.object({
   id: str(64).min(1),
   cat: str(64),
   name: str(120),
   ru: str(160).default(''),
   desc: str(1200).default(''),
+  descUz: str(1200).optional().default(''),
   ingr: z.array(str(80)).max(40).default([]),
+  ingrUz: z.array(str(80)).max(40).optional().default([]),
+  moods: z.array(str(20)).max(10).optional().default([]),
+  skewer: z.boolean().optional().default(false),
+  hidden: z.boolean().optional().default(false),
   allergens: z.array(str(60)).max(20).default([]),
   weight: str(40).default(''),
   price: money,
@@ -50,8 +56,24 @@ export const dishSchema = z.object({
   featured: z.boolean().default(false),
 });
 export const menuSchema = z.object({
-  cats: z.array(z.object({ id: str(64).min(1), name: str(120), ru: str(160).default('') })).max(40),
+  cats: z.array(z.object({ id: str(64).min(1), name: str(120), ru: str(160).default(''), theme: str(20).optional() })).max(40),
   dishes: z.array(dishSchema).max(400),
+  combos: z
+    .array(
+      z.object({
+        id: str(64).min(1),
+        name: str(120),
+        ru: str(160).default(''),
+        descUz: str(400).optional().default(''),
+        desc: str(400).optional().default(''),
+        active: z.boolean().optional().default(true),
+        items: z.array(z.object({ id: str(64), si: z.number().int().min(0).max(50).default(0), qty: z.number().int().min(1).max(50).default(1) })).min(1).max(20),
+      }),
+    )
+    .max(30)
+    .optional()
+    .default([]),
+  v: z.number().int().optional(),
 });
 
 export const settingsSchema = z.object({
@@ -68,7 +90,16 @@ export const settingsSchema = z.object({
   delivery: z.boolean(),
   prepTime: str(60),
   minOrder: money,
-  zones: z.array(z.object({ name: str(120), fee: money, min: money })).max(30),
+  zones: z.array(z.object({ name: str(120), uz: str(120).optional().default(''), fee: money, min: money })).max(30),
+  taglineUz: str(200).optional().default(''),
+  cityUz: str(80).optional().default(''),
+  addressUz: str(200).optional().default(''),
+  hoursUz: str(160).optional().default(''),
+  promos: z
+    .array(z.object({ code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,24}$/), pct: z.coerce.number().min(0).max(90).default(0), fixed: money.default(0), min: money.default(0), active: z.boolean().default(true) }))
+    .max(50)
+    .optional()
+    .default([]),
   pay: z.object({ cash: z.boolean(), card: z.boolean() }),
   story: z.array(str(1500)).length(6),
   storyPhotos: z.array(str(500)).length(6),

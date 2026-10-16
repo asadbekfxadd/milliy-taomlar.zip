@@ -2,152 +2,147 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { TableNote } from './TableEntry';
 import { useSite } from './Providers';
-import { DishBody, DishObj, DishRow, Opener, Tags } from './Dish';
+import { DishCard } from './Dish';
 import DishArt from './DishArt';
-import { TAGS } from '@/lib/defaults';
+import { MOODS, TAGS } from '@/lib/defaults';
+import { catName, catSub } from '@/lib/i18n';
+
+const LIGHT = new Set(['cream', 'herb', 'sand']);
+const FILTER_TAGS = ['new', 'hit', 'veg', 'spicy'];
 
 export default function MenuView() {
-  const { menu, settings } = useSite();
+  const { menu, t, lang } = useSite();
+  const [mood, setMood] = useState<string | null>(null);
   const [filters, setFilters] = useState<string[]>([]);
-  const [open, setOpen] = useState(false);
   const [active, setActive] = useState<string | undefined>(menu.cats[0]?.id);
   const catsBox = useRef<HTMLDivElement>(null);
 
   const groups = useMemo(
     () =>
       menu.cats
-        .map((c) => ({ c, ds: menu.dishes.filter((d) => d.cat === c.id && filters.every((f) => d.tags.includes(f))) }))
+        .map((c) => ({
+          c,
+          ds: menu.dishes.filter((d) => d.cat === c.id && filters.every((f) => d.tags.includes(f)) && (!mood || d.moods?.includes(mood))),
+        }))
         .filter((g) => g.ds.length),
-    [menu, filters],
+    [menu, filters, mood],
   );
   const total = menu.dishes.filter((d) => menu.cats.some((c) => c.id === d.cat)).length;
 
   // scroll-spy: highlight the category in view
   useEffect(() => {
-    const io = new IntersectionObserver(
-      (es) => es.forEach((e) => e.isIntersecting && setActive((e.target as HTMLElement).dataset.catsec)),
-      { rootMargin: '-45% 0px -50% 0px' },
-    );
+    const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && setActive((e.target as HTMLElement).dataset.catsec)), { rootMargin: '-45% 0px -50% 0px' });
     document.querySelectorAll('[data-catsec]').forEach((s) => io.observe(s));
-    return () => io.disconnect();
+    const top = () => {
+      const first = document.querySelector<HTMLElement>('[data-catsec]');
+      if (first && first.getBoundingClientRect().top > innerHeight * 0.5) setActive(first.dataset.catsec);
+    };
+    addEventListener('scroll', top, { passive: true });
+    return () => (io.disconnect(), removeEventListener('scroll', top));
   }, [groups]);
   useEffect(() => {
     const b = catsBox.current?.querySelector<HTMLElement>(`[data-cat="${active}"]`);
     if (b && catsBox.current) catsBox.current.scrollTo({ left: b.offsetLeft - catsBox.current.offsetLeft - 20, behavior: 'smooth' });
   }, [active]);
+  // deep link: /menu#cat-grill
+  useEffect(() => {
+    const h = location.hash.replace('#cat-', '');
+    if (h) setTimeout(() => go(h), 200);
+  }, []);
 
   const toggle = (k: string) => setFilters((f) => (f.includes(k) ? f.filter((x) => x !== k) : [...f, k]));
   const go = (id: string) => {
     const s = document.getElementById('cat-' + id);
-    if (s) scrollTo({ top: s.getBoundingClientRect().top + scrollY - 130, behavior: 'smooth' });
+    if (s) scrollTo({ top: s.getBoundingClientRect().top + scrollY - 120, behavior: 'smooth' });
   };
+  const reset = () => (setFilters([]), setMood(null));
 
   return (
     <>
-      <section className="masthead g">
+      <section className="masthead menu-mast g">
         <div className="in">
-          <div className="kicker">{settings.name}</div>
-          <h1>Меню</h1>
+          <div className="kicker">MANGO · milliy taomlar</div>
+          <h1>{t('menu.h')}</h1>
           <TableNote />
           <div className="row">
-            <p className="muted" style={{ maxWidth: '48ch', margin: 0, fontSize: 17 }}>
-              Нажмите на блюдо, чтобы увидеть состав, аллергены и выбрать порцию. Цены в сумах.
-            </p>
-            <span className="cap num">
-              {total} блюд · {menu.cats.length} разделов
-            </span>
+            <p className="muted lead-p">{t('menu.lead')}</p>
+            <span className="cap num">{t('menu.count', { d: total, c: groups.length })}</span>
+          </div>
+          <div className="chips" aria-label={t('menu.mood')}>
+            {MOODS.map((m) => (
+              <button key={m.id} className={`chip m-${m.id} ${mood === m.id ? 'on' : ''}`} aria-pressed={mood === m.id} onClick={() => setMood(mood === m.id ? null : m.id)}>
+                {lang === 'uz' ? m.uz : m.ru}
+              </button>
+            ))}
+            <span className="sep" aria-hidden="true" />
+            {FILTER_TAGS.map((k) => (
+              <button key={k} className={`chip tagchip ${filters.includes(k) ? 'on' : ''}`} aria-pressed={filters.includes(k)} onClick={() => toggle(k)}>
+                {TAGS[k][lang]}
+              </button>
+            ))}
+            {(filters.length > 0 || mood) && (
+              <button className="link" onClick={reset}>
+                {t('menu.reset')}
+              </button>
+            )}
           </div>
         </div>
       </section>
 
-      <nav className="catnav g" aria-label="Разделы меню">
+      <nav className="catnav g" aria-label={t('nav.sections')}>
         <div className="in">
           <div className="cats" ref={catsBox}>
-            {menu.cats.map((c) => {
-              const n = menu.dishes.filter((d) => d.cat === c.id).length;
-              return n ? (
-                <button key={c.id} data-cat={c.id} className={active === c.id ? 'on' : ''} onClick={() => go(c.id)}>
-                  {c.name}
-                  <sup className="num">{n}</sup>
-                </button>
-              ) : null;
-            })}
-          </div>
-          <button className="filt-btn" aria-expanded={open} aria-controls="filters" onClick={() => setOpen(!open)}>
-            {filters.length > 0 && <span className="dot" />}Фильтры
-          </button>
-        </div>
-        <div className={`filters ${open ? 'open' : ''}`} id="filters">
-          <div>
-            <div className="in fl">
-              {Object.entries(TAGS).map(([k, l]) => (
-                <button key={k} className={`chk ${filters.includes(k) ? 'on' : ''}`} aria-pressed={filters.includes(k)} onClick={() => toggle(k)}>
-                  {l}
-                </button>
-              ))}
-              {filters.length > 0 && (
-                <button className="link" onClick={() => setFilters([])}>
-                  Сбросить
-                </button>
-              )}
-            </div>
+            {groups.map(({ c, ds }) => (
+              <button key={c.id} data-cat={c.id} className={active === c.id ? 'on' : ''} onClick={() => go(c.id)}>
+                {catName(c, lang)}
+                <sup className="num">{ds.length}</sup>
+              </button>
+            ))}
           </div>
         </div>
       </nav>
 
-      <div className="g">
-        <div className="in">
-          {groups.length ? (
-            groups.map(({ c, ds }, ci) => {
-              const withPhoto = ds.filter((d) => d.photo);
-              const [a, b, cc] = withPhoto;
-              const shown = new Set([a, b, cc].filter(Boolean).map((d) => d!.id));
-              const rest = ds.filter((d) => !shown.has(d.id));
-              return (
-                <section key={c.id} className="catsec" id={'cat-' + c.id} data-catsec={c.id}>
-                  <div className="cat-h">
-                    <h2>{c.name}</h2>
-                    <span className="cap">
-                      {c.ru} · {ds.length}
-                    </span>
+      {groups.length ? (
+        groups.map(({ c, ds }) => {
+          const theme = c.theme || 'pom';
+          const lead = ds.find((d) => d.featured && d.available) ?? null;
+          const rest = ds.filter((d) => d !== lead);
+          const art = (lead ?? ds[0]).art;
+          return (
+            <section key={c.id} className={`catsec g th-${theme} ${LIGHT.has(theme) ? 'sec-light' : ''}`} id={'cat-' + c.id} data-catsec={c.id}>
+              <div className="in">
+                <header className="cat-h">
+                  <div>
+                    <span className="cap">{catSub(c, lang)}</span>
+                    <h2>{catName(c, lang)}</h2>
                   </div>
-                  {a && (
-                    <div className={`lead ${ci % 2 ? 'flip' : ''}`}>
-                      <Opener d={a}>
-                        <Tags d={a} />
-                        <DishArt art={a.art} photo={a.photo} className="r4" label={a.ru} />
-                      </Opener>
-                      <div>
-                        <DishBody d={a} />
-                      </div>
-                    </div>
-                  )}
-                  {b && (
-                    <div className={`pair ${ci % 2 ? '' : 'flip'}`}>
-                      <DishObj d={b} ph="r4" />
-                      {cc && <DishObj d={cc} />}
-                    </div>
-                  )}
-                  {rest.length > 0 && (
-                    <div className="ledger">
-                      {rest.map((d) => (
-                        <DishRow key={d.id} d={d} />
-                      ))}
-                    </div>
-                  )}
-                </section>
-              );
-            })
-          ) : (
-            <div className="empty">
-              Нет блюд с такими метками.{' '}
-              <button className="link" onClick={() => setFilters([])}>
-                Сбросить фильтры
-              </button>
-            </div>
-          )}
+                  <span className="cat-n num">{String(ds.length).padStart(2, '0')}</span>
+                  <span className="cat-art" aria-hidden="true">
+                    <DishArt art={art} className="round" />
+                  </span>
+                </header>
+                {lead && (
+                  <div className="lead2">
+                    <DishCard d={lead} variant="feature" />
+                  </div>
+                )}
+                <div className="tile-grid">
+                  {rest.map((d) => (
+                    <DishCard key={d.id} d={d} />
+                  ))}
+                </div>
+              </div>
+            </section>
+          );
+        })
+      ) : (
+        <div className="empty g">
+          {t('menu.none')}{' '}
+          <button className="link" onClick={reset}>
+            {t('menu.resetAll')}
+          </button>
         </div>
-      </div>
+      )}
     </>
   );
 }

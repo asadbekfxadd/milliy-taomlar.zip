@@ -26,20 +26,22 @@ export function priceLine(menu: Menu, st: Settings, i: { id: string; si: number;
   return { id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: i.note || '', station: stationOf(menu, st, d.id), sent: false, ks: null };
 }
 
-export function totals(o: { type: string; fee: number; items: OrderItem[] }, st: Settings) {
+export function totals(o: { type: string; fee: number; items: OrderItem[]; promoPct?: number; promoFixed?: number }, st: Settings) {
   const subtotal = o.items.reduce((s, l) => s + l.unit * l.qty, 0);
   const service = o.type === 'hall' ? Math.round((subtotal * (st.servicePct || 0)) / 100) : 0;
-  return { subtotal, service, total: subtotal + service + (o.fee || 0) };
+  // a promo applied at checkout follows later changes: percent is recalculated, a fixed sum never exceeds the dishes
+  const discount = o.promoPct ? Math.round((subtotal * o.promoPct) / 100) : Math.min(o.promoFixed || 0, subtotal);
+  return { subtotal, service, discount, total: subtotal + service + (o.fee || 0) - discount };
 }
 
 export async function saveItems(o: OrderRow, items: OrderItem[], st: Settings, extra: Record<string, unknown> = {}) {
   items.forEach((l) => (l.sum = l.unit * l.qty));
-  const t = totals({ type: o.type, fee: o.fee, items }, st);
+  const t = totals({ type: o.type, fee: o.fee, items, promoPct: o.promoPct, promoFixed: o.promoFixed }, st);
   const keys = Object.keys(extra);
-  const sets = keys.map((k, i) => `${k} = $${i + 6}`).join(', ');
+  const sets = keys.map((k, i) => `${k} = $${i + 7}`).join(', ');
   const r = await q(
-    `UPDATE orders SET items = $2, subtotal = $3, service = $4, total = $5, updated_at = now()${sets ? ', ' + sets : ''} WHERE id = $1 RETURNING *`,
-    [o.id, JSON.stringify(items), t.subtotal, t.service, t.total, ...keys.map((k) => extra[k])],
+    `UPDATE orders SET items = $2, subtotal = $3, service = $4, total = $5, discount = $6, updated_at = now()${sets ? ', ' + sets : ''} WHERE id = $1 RETURNING *`,
+    [o.id, JSON.stringify(items), t.subtotal, t.service, t.total, t.discount, ...keys.map((k) => extra[k])],
   );
   const saved = mapOrder(r.rows[0]);
   await afterChange(o, saved, st);
@@ -150,6 +152,8 @@ export function checkBody(o: OrderRow, st: Settings, kind: 'precheck' | 'receipt
     service: o.service,
     servicePct: st.servicePct,
     fee: o.fee,
+    discount: o.discount,
+    promo: o.promo,
     total: o.total,
     pay: o.paidWith || o.pay,
     customer: o.source === 'site' ? { name: o.name, phone: o.phone, address: o.address, zone: o.zone, when: o.when, note: o.note } : null,

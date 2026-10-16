@@ -1,89 +1,98 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import type { Dish, Settings } from '@/lib/types';
+import type { Dish } from '@/lib/types';
 import { basePrice, portionLabel } from '@/lib/pricing';
-import { fmt, photoSrc } from '@/lib/format';
-import { artBitmap } from './DishArt';
+import { fmt } from '@/lib/format';
+import { prepRange, unitText } from '@/lib/i18n';
+import { useSite } from './Providers';
+import DishArt from './DishArt';
 import Girih from './Girih';
 
-export default function Hero({ s, dish }: { s: Settings; dish?: Dish }) {
-  const cv = useRef<HTMLCanvasElement>(null);
-  const plate = useRef<HTMLDivElement>(null);
-  const lattice = useRef<HTMLDivElement>(null);
+/* Spread of dishes: one dominant plate and supporting plates around it, with floating herbs and spices. */
+const SLOTS = ['main', 'a', 'b', 'c', 'd', 'e'] as const;
 
-  // plate with rising steam
+function Leaf({ className, color = '#6E9E45' }: { className: string; color?: string }) {
+  return (
+    <svg className={`deco ${className}`} viewBox="0 0 60 30" aria-hidden="true">
+      <path d="M2 15C14 2 40 0 58 15C40 30 14 28 2 15Z" fill={color} />
+      <path d="M4 15H52" stroke="rgba(255,255,255,.35)" strokeWidth="1.2" />
+    </svg>
+  );
+}
+function Chili({ className }: { className: string }) {
+  return (
+    <svg className={`deco ${className}`} viewBox="0 0 70 30" aria-hidden="true">
+      <path d="M8 14C20 6 46 4 62 18C50 26 22 26 8 20Z" fill="#C2362B" />
+      <path d="M8 14C5 10 3 8 1 9" stroke="#5C8A3C" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M22 12C34 9 46 10 56 16" stroke="rgba(255,255,255,.35)" strokeWidth="2" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+}
+function Seeds({ className }: { className: string }) {
+  return (
+    <svg className={`deco ${className}`} viewBox="0 0 60 40" aria-hidden="true">
+      {[[8, 10], [22, 6], [36, 14], [14, 24], [30, 28], [48, 22], [44, 6]].map(([x, y], i) => (
+        <ellipse key={i} cx={x} cy={y} rx="4.2" ry="2" transform={`rotate(${i * 37} ${x} ${y})`} fill={i % 3 ? '#C9A46A' : '#8C6A3C'} />
+      ))}
+    </svg>
+  );
+}
+function Pomegranate({ className }: { className: string }) {
+  return (
+    <svg className={`deco ${className}`} viewBox="0 0 40 40" aria-hidden="true">
+      {[[10, 12], [20, 8], [28, 16], [16, 22], [26, 28], [12, 32]].map(([x, y], i) => (
+        <g key={i}>
+          <ellipse cx={x} cy={y} rx="4" ry="5" fill="#B5202A" />
+          <ellipse cx={x - 1.2} cy={y - 1.8} rx="1.2" ry="1.6" fill="rgba(255,255,255,.55)" />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+export default function Hero({ dishes }: { dishes: Dish[] }) {
+  const { settings: s, t, lang, count } = useSite();
+  const stage = useRef<HTMLDivElement>(null);
+  const main = dishes[0];
+
+  // gentle parallax on scroll and pointer (skipped with reduced motion)
   useEffect(() => {
-    const c = cv.current;
-    if (!c) return;
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let raf = 0, alive = true;
-    const steam: { x: number; y: number; r: number; l: number; m: number; s: number }[] = [];
-    (async () => {
-      const r = c.getBoundingClientRect();
-      const W = Math.round(r.width * Math.min(innerWidth < 1020 ? 1.5 : 2, devicePixelRatio || 1));
-      if (!W) return;
-      const base = await artBitmap('plov', W);
-      if (!alive) return;
-      c.width = c.height = W;
-      const g = c.getContext('2d')!;
-      const frame = () => {
-        g.clearRect(0, 0, W, W);
-        g.drawImage(base, 0, 0);
-        if (reduce) return;
-        if (steam.length < 44 && Math.random() < 0.5)
-          steam.push({ x: W / 2 + (Math.random() - 0.5) * W * 0.3, y: W * 0.5 + (Math.random() - 0.5) * W * 0.16, r: W * (0.04 + Math.random() * 0.05), l: 0, m: 240 + Math.random() * 160, s: Math.random() * 6 });
-        g.save();
-        g.globalCompositeOperation = 'screen';
-        for (let i = steam.length - 1; i >= 0; i--) {
-          const p = steam[i];
-          p.l++;
-          p.y -= W * 0.0016;
-          p.x += Math.sin((p.l + p.s * 30) / 40) * W * 0.0009;
-          p.r *= 1.004;
-          const a = Math.sin((p.l / p.m) * Math.PI) * 0.085;
-          const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-          gr.addColorStop(0, `rgba(255,246,230,${a})`);
-          gr.addColorStop(1, 'rgba(255,246,230,0)');
-          g.fillStyle = gr;
-          g.beginPath();
-          g.arc(p.x, p.y, p.r, 0, 7);
-          g.fill();
-          if (p.l >= p.m) steam.splice(i, 1);
-        }
-        g.restore();
-        if (document.visibilityState === 'visible' && scrollY < innerHeight * 1.3) raf = requestAnimationFrame(frame);
-        else raf = window.setTimeout(() => (raf = requestAnimationFrame(frame)), 400) as unknown as number;
-      };
-      frame();
-    })();
+    const el = stage.current;
+    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let raf = 0,
+      mx = 0,
+      my = 0;
+    const apply = () => {
+      raf = 0;
+      const y = Math.min(scrollY, innerHeight);
+      el.style.setProperty('--sy', String(y));
+      el.style.setProperty('--mx', mx.toFixed(3));
+      el.style.setProperty('--my', my.toFixed(3));
+    };
+    const ask = () => (raf ||= requestAnimationFrame(apply));
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      mx = e.clientX / innerWidth - 0.5;
+      my = e.clientY / innerHeight - 0.5;
+      ask();
+    };
+    addEventListener('scroll', ask, { passive: true });
+    addEventListener('pointermove', onMove, { passive: true });
     return () => {
-      alive = false;
+      removeEventListener('scroll', ask);
+      removeEventListener('pointermove', onMove);
       cancelAnimationFrame(raf);
-      clearTimeout(raf);
     };
   }, []);
 
-  // soft parallax
-  useEffect(() => {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let raf = 0;
-    const on = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const y = scrollY;
-        if (y > innerHeight * 1.2) return;
-        if (plate.current) plate.current.style.transform = `translate3d(0,${y * 0.14}px,0) rotate(${y * 0.012}deg)`;
-        if (lattice.current) lattice.current.style.transform = `translate3d(0,${y * 0.06}px,0)`;
-      });
-    };
-    addEventListener('scroll', on, { passive: true });
-    return () => removeEventListener('scroll', on);
-  }, []);
+  const zones = s.delivery ? s.zones : [];
+  const minFee = zones.length ? Math.min(...zones.map((z) => +z.fee)) : null;
+  const minOrder = zones.length ? Math.min(...zones.map((z) => +z.min)) : null;
 
   return (
-    <section className="hero g">
-      <div ref={lattice} style={{ position: 'absolute', inset: 0, zIndex: -1 }}>
+    <section className="hero2 g">
+      <div className="hero-bg" aria-hidden="true">
         <Girih w={1600} h={1000} step={200} className="lattice" />
       </div>
       <div className="in">
@@ -91,45 +100,78 @@ export default function Hero({ s, dish }: { s: Settings; dish?: Dish }) {
           <div className="issue">
             <i />
             <span className="kicker">
-              {s.name}
-              {s.city ? ` · ${s.city}` : ''}
+              {s.name} · milliy taomlar · {lang === 'uz' ? 'Yangiyoʻl' : 'Янгиюль'}
             </span>
           </div>
           <h1>
             <span className="l">
-              <span>Вкус,</span>
-            </span>
-            <span className="l">
-              <span>в котором живёт</span>
+              <span>{t('hero.h1a')}</span>
             </span>
             <span className="l">
               <span>
-                <em>Узбекистан</em>
+                <em>{t('hero.h1b')}</em>
               </span>
             </span>
           </h1>
-          <p className="sub">{s.tagline}</p>
+          <p className="sub">{t('hero.sub')}</p>
           <div className="ctas">
             <Link className="btn" href="/menu">
-              Открыть меню
+              {t('hero.cta1')}
             </Link>
-            <button className="btn ghost" onClick={() => document.getElementById('live')?.scrollIntoView({ behavior: 'smooth' })}>
-              Как жарим шашлык
-            </button>
+            <Link className="btn ghost" href={count ? '/cart' : '#moods'}>
+              {t('hero.cta2')}
+            </Link>
           </div>
+          <ul className="strip" aria-label="info">
+            <li>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="13" r="8" />
+                <path d="M12 9v4l3 2M9 2h6" />
+              </svg>
+              {t('strip.time', { t: prepRange(s) })}
+            </li>
+            {minFee !== null ? (
+              <>
+                <li>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2 7h11v9H2zM13 10h4l4 3v3h-8z" />
+                    <circle cx="6" cy="18" r="2" />
+                    <circle cx="17" cy="18" r="2" />
+                  </svg>
+                  {t('strip.delivery', { f: fmt(minFee) })}
+                </li>
+                <li>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2" />
+                  </svg>
+                  {t('strip.min', { m: fmt(minOrder!) })}
+                </li>
+              </>
+            ) : (
+              <li>{s.pickup ? t('strip.pickup') : t('strip.hall')}</li>
+            )}
+          </ul>
         </div>
-        <div className={`plate ${dish?.photo ? 'photo' : ''}`} ref={plate}>
-          {dish?.photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoSrc(dish.photo)} alt={dish.ru} fetchPriority="high" />
-          ) : (
-            <canvas ref={cv} role="img" aria-label="Плов на риштанском лагане" />
-          )}
-          {dish && (
+
+        <div className="spread2" ref={stage}>
+          <div className="glow" aria-hidden="true" />
+          {dishes.slice(0, SLOTS.length).map((d, i) => (
+            <div key={d.id} className={`pl pl-${SLOTS[i]}`} style={{ ['--i' as string]: i }}>
+              <DishArt art={d.art} photo={d.photo} className="round" label={d.ru} eager={i < 3} />
+            </div>
+          ))}
+          <Leaf className="dl1" />
+          <Leaf className="dl2" color="#7FAE4E" />
+          <Leaf className="dl3" color="#4F7A34" />
+          <Chili className="dc1" />
+          <Seeds className="ds1" />
+          <Seeds className="ds2" />
+          <Pomegranate className="dp1" />
+          {main && (
             <div className="plate-tag">
               <i />
               <span className="cap">
-                {dish.name} · {portionLabel(dish)} · {fmt(basePrice(dish))} сум
+                {main.name} · {unitText(portionLabel(main), lang)} · {fmt(basePrice(main))} {t('sum')}
               </span>
             </div>
           )}

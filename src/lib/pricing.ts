@@ -31,3 +31,10 @@ export function priceCart(menu: Menu, cart: CartItem[]) {
     .filter(Boolean) as (CartItem & { d: Dish; unit: number; total: number; mods: string[] })[];
   return { lines, subtotal: lines.reduce((s, l) => s + l.total, 0) };
 }
+
+/** Promo discount on the dishes subtotal (not on delivery or service). */
+export function promoDiscount(p: { pct: number; fixed: number; min: number } | null | undefined, subtotal: number) {
+  if (!p || subtotal <= 0 || subtotal < (p.min || 0)) return 0;
+  const d = p.pct > 0 ? Math.round((subtotal * p.pct) / 100) : Number(p.fixed) || 0;
+  return Math.max(0, Math.min(d, subtotal));
+}

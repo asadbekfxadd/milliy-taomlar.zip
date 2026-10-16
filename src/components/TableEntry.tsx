@@ -20,7 +20,7 @@ export function forgetTable() {
 }
 
 export default function TableEntry({ n }: { n: number }) {
-  const { settings } = useSite();
+  const { settings, t } = useSite();
   const router = useRouter();
   const ok = n >= 1 && n <= (settings.tables || 0);
   useEffect(() => {
@@ -34,8 +34,18 @@ export default function TableEntry({ n }: { n: number }) {
     <section className="masthead g">
       <div className="in">
         <div className="kicker">{settings.name}</div>
-        <h1 style={{ fontSize: 'clamp(56px,10vw,150px)' }}>{ok ? <>Стол <em>{n}</em></> : 'Стол не найден'}</h1>
-        <p className="muted" style={{ fontSize: 18 }}>{ok ? 'Открываем меню…' : 'Попросите официанта или откройте меню вручную.'}</p>
+        <h1 style={{ fontSize: 'clamp(56px,10vw,150px)' }}>
+          {ok ? (
+            <>
+              {t('tb.table')} <em>{n}</em>
+            </>
+          ) : (
+            t('tb.notFound')
+          )}
+        </h1>
+        <p className="muted" style={{ fontSize: 18 }}>
+          {ok ? t('tb.opening') : t('tb.ask')}
+        </p>
       </div>
     </section>
   );
@@ -43,7 +53,7 @@ export default function TableEntry({ n }: { n: number }) {
 
 /* Small note on the menu so a guest who tapped the table tag knows the order goes to their table. */
 export function TableNote() {
-  const { settings } = useSite();
+  const { settings, t } = useSite();
   const [n, setN] = useState<number | null>(null);
   useEffect(() => {
     const t = readTable();
@@ -52,11 +62,9 @@ export function TableNote() {
   if (!n) return null;
   return (
     <div className="tablenote">
-      <span>
-        Вы за столом <b className="num">{n}</b> · заказ придёт прямо к вам, оплата официанту
-      </span>
+      <span>{t('tb.note', { n })}</span>
       <button type="button" className="link" onClick={() => (forgetTable(), setN(null))}>
-        Не мой стол
+        {t('tb.notMine')}
       </button>
     </div>
   );
