@@ -70,6 +70,7 @@ export default function Footer({ s }: { s: Settings }) {
             <span>
               © {new Date().getFullYear()} {s.name}
             </span>
+            <a href="/staff" className="credit" rel="nofollow">Вход для персонала</a>
             <span className="credit">
               Цены в сумах · Фото блюд:{' '}
               <a href="https://unsplash.com/@arrogant_7007" target="_blank" rel="noopener">otabek xatipov</a>,{' '}

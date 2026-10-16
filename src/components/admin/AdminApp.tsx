@@ -152,7 +152,7 @@ export default function AdminApp({ initialMenu, initialSettings, integ }: { init
         }} />}
         {tab === 'menu' && <MenuTab menu={menu} edit={editMenu} toast={toast} />}
         {tab === 'cats' && <CatsTab menu={menu} edit={editMenu} />}
-        {tab === 'settings' && <SettingsTab s={settings} edit={editSettings} toast={toast} />}
+        {tab === 'settings' && <SettingsTab s={settings} edit={editSettings} toast={toast} menuCats={menu.cats} />}
         {tab === 'int' && <IntTab integ={integ} toast={toast} />}
 
         {(tab === 'menu' || tab === 'cats' || tab === 'settings') && (
@@ -502,7 +502,7 @@ function CatsTab({ menu, edit }: { menu: Menu; edit: (fn: (m: Menu) => void) => 
   );
 }
 
-function SettingsTab({ s, edit, toast }: { s: Settings; edit: (fn: (s: Settings) => void) => void; toast: (m: string) => void }) {
+function SettingsTab({ s, edit, toast, menuCats }: { s: Settings; edit: (fn: (s: Settings) => void) => void; toast: (m: string) => void; menuCats: Menu['cats'] }) {
   const f = (k: keyof Settings, l: string, ph = '') => (
     <div className="fld">
       <label>{l}</label>
@@ -559,6 +559,51 @@ function SettingsTab({ s, edit, toast }: { s: Settings; edit: (fn: (s: Settings)
         </div>
         <div className="alert" style={{ fontSize: 13 }}>
           Зоны и суммы стоят примерные. Замените их на свои перед запуском.
+        </div>
+      </div>
+      <div className="card form" style={{ gridColumn: '1/-1', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))' }}>
+        <h3 style={{ fontSize: 28, gridColumn: '1/-1' }}>Зал, кухня и печать</h3>
+        <div className="fld">
+          <label>Столов в зале</label>
+          <input inputMode="numeric" value={String(s.tables ?? 0)} onChange={(e) => edit((x) => (x.tables = Math.min(200, +e.target.value.replace(/\D/g, '') || 0)))} />
+        </div>
+        <div className="fld">
+          <label>Обслуживание в зале, %</label>
+          <input inputMode="decimal" value={String(s.servicePct ?? 0)} onChange={(e) => edit((x) => (x.servicePct = Math.min(30, +e.target.value.replace(/[^\d.]/g, '') || 0)))} />
+        </div>
+        <div className="fld">
+          <label>Ширина чековой ленты</label>
+          <select value={s.paper || '80'} onChange={(e) => edit((x) => (x.paper = e.target.value as '80' | '58'))}>
+            <option value="80">80 мм</option>
+            <option value="58">58 мм</option>
+          </select>
+        </div>
+        <div className="fld">
+          <span className="lbl">Заказы с сайта</span>
+          <div className="tgl">
+            <button type="button" className={`chk ${s.autoAcceptOnline ? 'on' : ''}`} onClick={() => edit((x) => (x.autoAcceptOnline = !x.autoAcceptOnline))}>
+              {s.autoAcceptOnline ? 'Сразу на кухню и в печать' : 'Сначала принимает кассир'}
+            </button>
+          </div>
+        </div>
+        <div className="fld" style={{ gridColumn: '1/-1' }}>
+          <span className="lbl">Какой цех готовит раздел меню (туда печатается бегунок)</span>
+          <div className="agrid" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 8 }}>
+            {menuCats.map((c) => (
+              <label key={c.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', fontSize: 14 }}>
+                <span>{c.name}</span>
+                <select
+                  value={s.catStations?.[c.id] || 'kitchen'}
+                  onChange={(e) => edit((x) => (x.catStations = { ...(x.catStations || {}), [c.id]: e.target.value }))}
+                  style={{ background: 'var(--char)', border: '1px solid var(--line-2)', borderRadius: 8, padding: '6px 8px', color: 'var(--cream)' }}
+                >
+                  <option value="kitchen">Кухня</option>
+                  <option value="mangal">Мангал</option>
+                  <option value="bar">Бар</option>
+                </select>
+              </label>
+            ))}
+          </div>
         </div>
       </div>
       <div className="card" style={{ gridColumn: '1/-1' }}>
@@ -638,8 +683,8 @@ function IntTab({ integ, toast }: { integ: { telegram: boolean; telegramWebhook:
       <Row st="не подключено" cls="" t="Онлайн-оплата Payme / Click">
         Нужны договор и ключи мерчанта. До этого гости платят при получении, онлайн-оплата на сайте честно отмечена как недоступная.
       </Row>
-      <Row st="не подключено" cls="" t="Касса и экран кухни">
-        Следующий шаг: заказ с сайта попадает кассиру на «Принять» и на экран кухни.
+      <Row st="работает" cls="ok" t="Касса, кухня и печать чеков">
+        Экраны персонала: <a href="/staff" style={{ color: 'var(--saffron)' }}>/staff</a>. Вход по PIN из переменной STAFF_PIN (или паролем администратора). Бегунки печатаются по цехам, пречек и чек — на кассе.
       </Row>
     </div>
   );

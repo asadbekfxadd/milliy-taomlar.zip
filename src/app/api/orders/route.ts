@@ -7,6 +7,7 @@ import { modsOf, unitPrice } from '@/lib/pricing';
 import { normalizePhone } from '@/lib/format';
 import { notifyNewOrder } from '@/lib/telegram';
 import { clientIp, limited } from '@/lib/rate';
+import { sendToKitchen, stationOf } from '@/lib/pos';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
     const ex = [...new Set(i.ex)];
     if (ex.some((x) => x >= d.extras.length)) return bad('Неверная добавка. Обновите корзину.');
     const unit = unitPrice(d, i.si, ex);
-    items.push({ id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty });
+    items.push({ id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: '', station: stationOf(menu, st, d.id), sent: false, ks: null as null });
   }
   const subtotal = items.reduce((s, i) => s + i.sum, 0);
 
@@ -65,7 +66,16 @@ export async function POST(req: Request) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
     [newId(), randomBytes(16).toString('hex'), o.type, zone, fee, o.type === 'delivery' ? o.address : '', o.name, phone, o.note, o.when, o.pay, JSON.stringify(items), subtotal, subtotal + fee],
   );
-  const order = mapOrder(r.rows[0]);
+  let order = mapOrder(r.rows[0]);
+
+  // Like Jowi/R-Keeper: an online order goes straight to the kitchen and a slip prints at the cashier.
+  if (st.autoAcceptOnline) {
+    try {
+      order = (await sendToKitchen(order, st, { slip: true })).order;
+    } catch (e) {
+      console.error('auto-accept failed', e);
+    }
+  }
 
   try {
     const mid = await notifyNewOrder({ ...order, items });

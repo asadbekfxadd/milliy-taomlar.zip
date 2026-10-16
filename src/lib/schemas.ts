@@ -42,7 +42,7 @@ export const dishSchema = z.object({
   price: money,
   tags: z.array(str(20)).max(10).default([]),
   art: str(40).default('plov'),
-  photo: str(64).default(''),
+  photo: str(500).default(''),
   sizes: z.array(size).max(12).default([]),
   extras: z.array(extra).max(20).default([]),
   available: z.boolean().default(true),
@@ -70,5 +70,23 @@ export const settingsSchema = z.object({
   zones: z.array(z.object({ name: str(120), fee: money, min: money })).max(30),
   pay: z.object({ cash: z.boolean(), card: z.boolean() }),
   story: z.array(str(1500)).length(6),
-  storyPhotos: z.array(str(64)).length(6),
+  storyPhotos: z.array(str(500)).length(6),
+  tables: z.coerce.number().int().min(0).max(200),
+  servicePct: z.coerce.number().min(0).max(30),
+  autoAcceptOnline: z.boolean(),
+  catStations: z.record(z.string().max(64), z.enum(['kitchen', 'mangal', 'bar'])),
+  paper: z.enum(['80', '58']),
 });
+
+const posLine = z.object({
+  id: str(64),
+  si: z.number().int().min(0).max(50).default(0),
+  ex: z.array(z.number().int().min(0).max(50)).max(20).default([]),
+  qty: z.number().int().min(1).max(99).default(1),
+  note: str(200).optional().default(''),
+});
+export const posCreate = z.object({ table: z.number().int().min(0).max(500).nullable(), guests: z.number().int().min(0).max(100).default(0), waiter: str(60).default(''), type: z.enum(['hall', 'pickup']).default('hall') });
+export const posAdd = z.object({ items: z.array(posLine).min(1).max(40) });
+export const posLineEdit = z.object({ line: z.number().int().min(0).max(500), qty: z.number().int().min(0).max(99) });
+export const posPay = z.object({ method: z.enum(['cash', 'card', 'payme', 'click']) });
+export const kitchenUpdate = z.object({ lines: z.array(z.number().int().min(0).max(500)).max(100), to: z.enum(['cooking', 'ready']) });

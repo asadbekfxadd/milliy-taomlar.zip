@@ -53,7 +53,25 @@ CREATE TABLE IF NOT EXISTS images (
   height     integer NOT NULL,
   data       bytea NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
-);`;
+);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS source   text NOT NULL DEFAULT 'site';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS table_no integer;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS guests   integer NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS waiter   text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS service  integer NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_with text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS paid_at  timestamptz;
+CREATE TABLE IF NOT EXISTS print_jobs (
+  id          serial PRIMARY KEY,
+  station     text NOT NULL,
+  kind        text NOT NULL,
+  order_id    text,
+  body        jsonb NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  claimed_at  timestamptz,
+  printed_at  timestamptz
+);
+CREATE INDEX IF NOT EXISTS print_jobs_pending_idx ON print_jobs (station) WHERE printed_at IS NULL;`;
 
 function ready() {
   if (!g.pgReady)
@@ -79,11 +97,14 @@ export type OrderRow = {
   id: string; no: number; token: string; status: string; type: string; zone: string; fee: number; address: string;
   name: string; phone: string; note: string; when: string; pay: string; items: any; subtotal: number; total: number;
   tgMessageId: number | null; createdAt: string;
+  source: string; tableNo: number | null; guests: number; waiter: string; service: number; paidWith: string; paidAt: string | null;
 };
 export const mapOrder = (r: any): OrderRow => ({
   id: r.id, no: r.no, token: r.token, status: r.status, type: r.type, zone: r.zone, fee: r.fee, address: r.address,
   name: r.name, phone: r.phone, note: r.note, when: r.when, pay: r.pay, items: r.items, subtotal: r.subtotal, total: r.total,
-  tgMessageId: r.tg_message_id === null ? null : Number(r.tg_message_id), createdAt: new Date(r.created_at).toISOString(),
+  tgMessageId: r.tg_message_id === null || r.tg_message_id === undefined ? null : Number(r.tg_message_id), createdAt: new Date(r.created_at).toISOString(),
+  source: r.source ?? 'site', tableNo: r.table_no ?? null, guests: r.guests ?? 0, waiter: r.waiter ?? '', service: r.service ?? 0,
+  paidWith: r.paid_with ?? '', paidAt: r.paid_at ? new Date(r.paid_at).toISOString() : null,
 });
 
 export async function getOrder(id: string) {

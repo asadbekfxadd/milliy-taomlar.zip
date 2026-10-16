@@ -56,7 +56,9 @@ export const DEFAULT_SETTINGS: Settings={
   pickup:true,delivery:true,prepTime:'30–45 минут',minOrder:60000,
   zones:[{name:'Янгиюль, центр',fee:10000,min:60000},{name:'Янгиюль, окраины',fee:15000,min:80000}],
   pay:{cash:true,card:true},
-  story:['','','','','',''],storyPhotos:['','','','','','']
+  story:['','','','','',''],storyPhotos:['','','','','',''],
+  tables:15,servicePct:10,autoAcceptOnline:true,paper:'80',
+  catStations:{grill:'mangal',brizol:'kitchen',milliy:'kitchen',xamir:'kitchen',shurva:'kitchen',salat:'kitchen',ichimlik:'bar',desert:'bar'}
 };
 export const TAGS: Record<string,string>={hit:'Хит',chef:'Выбор шефа',trad:'Традиционный рецепт',spicy:'Острое',veg:'Без мяса'};
 export const STATUS: [string,string][]=[['new','Отправлен'],['accepted','Принят'],['cooking','Готовится'],['ready','Готов / в пути'],['done','Завершён']];

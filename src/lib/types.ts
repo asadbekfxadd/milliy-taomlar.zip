@@ -39,9 +39,19 @@ export type Settings = {
   pay: { cash: boolean; card: boolean };
   story: string[];
   storyPhotos: string[];
+  /* POS */
+  tables: number;
+  servicePct: number;
+  autoAcceptOnline: boolean;
+  catStations: Record<string, string>;
+  paper: '80' | '58';
 };
 export type CartItem = { key: string; id: string; si: number; ex: number[]; qty: number };
-export type OrderItem = { id: string; name: string; mods: string; qty: number; unit: number; sum: number };
+export type KitchenState = 'queued' | 'cooking' | 'ready';
+export type OrderItem = {
+  id: string; name: string; mods: string; qty: number; unit: number; sum: number;
+  note?: string; station?: string; sent?: boolean; ks?: KitchenState | null; at?: number;
+};
 export type OrderStatus = 'new' | 'accepted' | 'cooking' | 'ready' | 'done' | 'cancelled';
 export type PublicOrder = {
   id: string;
