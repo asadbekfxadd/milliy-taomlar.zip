@@ -43,6 +43,8 @@ export type Settings = {
   tables: number;
   servicePct: number;
   autoAcceptOnline: boolean;
+  prepMinutes: number;
+  deliveryMinutes: number;
   printGuestChecks: boolean;
   catStations: Record<string, string>;
   paper: '80' | '58';
@@ -58,7 +60,13 @@ export type PublicOrder = {
   id: string;
   no: number;
   status: OrderStatus;
-  type: 'pickup' | 'delivery';
+  type: 'pickup' | 'delivery' | 'hall';
+  pay: string;
+  payStatus: 'unpaid' | 'pending' | 'paid' | 'failed' | 'refunded';
+  payUrl: string | null;
+  etaAt: string | null;
+  tgLink: string | null;
+  tgLinked: boolean;
   fee: number;
   items: OrderItem[];
   subtotal: number;

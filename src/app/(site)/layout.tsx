@@ -1,4 +1,5 @@
 import { getMenu, getSettings } from '@/lib/data';
+import { providers } from '@/lib/payments';
 import Providers from '@/components/Providers';
 import { Header, Reveal, TabBar } from '@/components/Chrome';
 import Footer from '@/components/Footer';
@@ -20,7 +21,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       <a href="#main" className="sr" style={{ position: 'absolute' }}>
         К содержимому
       </a>
-      <Providers menu={menu} settings={settings}>
+      <Providers menu={menu} settings={settings} online={providers()}>
         <Header />
         <main id="main" tabIndex={-1} className="enter">
           {children}

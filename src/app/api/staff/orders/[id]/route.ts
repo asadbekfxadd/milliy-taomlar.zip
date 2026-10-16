@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { isStaff } from '@/lib/auth';
-import { getOrder, setOrderStatus } from '@/lib/db';
+import { getOrder } from '@/lib/db';
 import { getMenu, getSettings } from '@/lib/data';
 import { posAdd, posLineEdit, posPay } from '@/lib/schemas';
-import { printCheck, priceLine, saveItems, sendToKitchen } from '@/lib/pos';
-import { refreshOrderMessage } from '@/lib/telegram';
+import { adjustEta, kitchenMove, printCheck, priceLine, saveItems, sendToKitchen, updateStatus } from '@/lib/pos';
 import type { OrderItem } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -51,7 +50,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     case 'accept': {
       if (!items.some((l) => !l.sent)) return bad('Нет новых позиций для кухни');
       const r = await sendToKitchen(o, st);
-      if (o.source === 'site') refreshOrderMessage(r.order).catch(() => {});
       return NextResponse.json(r.order);
     }
     case 'precheck': {
@@ -64,16 +62,29 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       const p = posPay.safeParse(body);
       if (!p.success) return bad('Выберите способ оплаты');
       if (!items.length) return bad('Чек пустой');
+      if (o.payStatus === 'paid') return bad('Заказ уже оплачен онлайн. Нажмите «Выдан».');
       if (items.some((l) => !l.sent)) return bad('Есть позиции, не отправленные на кухню');
-      const paid = await saveItems(o, items, st, { status: 'done', paid_with: p.data.method, paid_at: new Date().toISOString() });
+      const paid = await saveItems(o, items, st, { status: 'done', paid_with: p.data.method, paid_at: new Date().toISOString(), pay_status: 'paid' });
       if (st.printGuestChecks) await printCheck(paid, st, 'receipt');
-      if (o.source === 'site') refreshOrderMessage(paid).catch(() => {});
       return NextResponse.json(paid);
     }
     case 'cancel': {
-      const c = await setOrderStatus(o.id, 'cancelled');
-      if (c && o.source === 'site') refreshOrderMessage(c).catch(() => {});
-      return NextResponse.json(c);
+      return NextResponse.json(await updateStatus(o.id, 'cancelled', st));
+    }
+    case 'eta': {
+      const m = Math.max(-60, Math.min(120, Math.round(Number(body?.minutes) || 0)));
+      if (!m) return bad('Укажите минуты');
+      return NextResponse.json(await adjustEta(o, m));
+    }
+    case 'ready': {
+      if (!items.some((l) => l.sent)) return bad('Сначала отправьте заказ на кухню');
+      const idx = items.map((l, i) => (l.sent && l.ks !== 'ready' ? i : -1)).filter((i) => i >= 0);
+      return NextResponse.json(idx.length ? await kitchenMove(o.id, idx, 'ready', st) : await updateStatus(o.id, 'ready', st));
+    }
+    case 'complete': {
+      if (o.payStatus !== 'paid') return bad('Заказ не оплачен. Примите оплату.');
+      if (items.some((l) => !l.sent)) return bad('Есть позиции, не отправленные на кухню');
+      return NextResponse.json(await updateStatus(o.id, 'done', st));
     }
     case 'reprint': {
       if (!st.printGuestChecks) return bad('Печать чеков для гостя выключена в настройках');

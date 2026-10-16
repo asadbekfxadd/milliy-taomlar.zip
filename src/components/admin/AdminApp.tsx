@@ -35,7 +35,7 @@ async function api(url: string, method: string, body?: unknown) {
   return j;
 }
 
-export default function AdminApp({ initialMenu, initialSettings, integ }: { initialMenu: Menu; initialSettings: Settings; integ: { telegram: boolean; telegramWebhook: boolean } }) {
+export default function AdminApp({ initialMenu, initialSettings, integ }: { initialMenu: Menu; initialSettings: Settings; integ: { telegram: boolean; telegramWebhook: boolean; payme: boolean; click: boolean; site: string } }) {
   const { toast } = useSite();
   const router = useRouter();
   const [tab, setTab] = useState<'orders' | 'menu' | 'cats' | 'settings' | 'int'>('orders');
@@ -552,7 +552,15 @@ function SettingsTab({ s, edit, toast, menuCats }: { s: Settings; edit: (fn: (s:
             </button>
           </div>
         </div>
-        {f('prepTime', 'Время приготовления', '30–45 минут')}
+        {f('prepTime', 'Время приготовления (текст на сайте)', '30–45 минут')}
+        <div className="fld">
+          <label>Готовим, мин (для времени ожидания гостю)</label>
+          <input inputMode="numeric" value={String(s.prepMinutes ?? 25)} onChange={(e) => edit((x) => (x.prepMinutes = Math.max(1, Math.min(240, +e.target.value.replace(/\D/g, '') || 0))))} />
+        </div>
+        <div className="fld">
+          <label>Доставка в пути, мин</label>
+          <input inputMode="numeric" value={String(s.deliveryMinutes ?? 20)} onChange={(e) => edit((x) => (x.deliveryMinutes = Math.min(240, +e.target.value.replace(/\D/g, '') || 0)))} />
+        </div>
         <div className="fld">
           <label>Зоны доставки: название | цена доставки | минимальный заказ</label>
           <textarea rows={4} defaultValue={lines(s.zones, (z) => `${z.name} | ${z.fee} | ${z.min}`)} onChange={(e) => edit((x) => (x.zones = parseLines(e.target.value, ['name', 'fee', 'min'])))} />
@@ -640,7 +648,7 @@ function SettingsTab({ s, edit, toast, menuCats }: { s: Settings; edit: (fn: (s:
   );
 }
 
-function IntTab({ integ, toast }: { integ: { telegram: boolean; telegramWebhook: boolean }; toast: (s: string) => void }) {
+function IntTab({ integ, toast }: { integ: { telegram: boolean; telegramWebhook: boolean; payme: boolean; click: boolean; site: string }; toast: (s: string) => void }) {
   const call = async (action: string) => {
     try {
       const r = await api('/api/admin/telegram', 'POST', { action });
@@ -666,7 +674,7 @@ function IntTab({ integ, toast }: { integ: { telegram: boolean; telegramWebhook:
       <Row st={integ.telegram ? 'подключено' : 'не подключено'} cls={integ.telegram ? 'ok' : ''} t="Уведомления в Telegram">
         {integ.telegram ? (
           <>
-            Новые заказы приходят в чат с кнопками статуса.{' '}
+            Новые заказы приходят в чат с кнопками статуса, а гости получают от бота «принят → готовится → готово».{' '}
             {!integ.telegramWebhook && 'Чтобы кнопки работали, задайте PUBLIC_URL и TELEGRAM_WEBHOOK_SECRET.'}
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
               <button className="btn ghost sm" onClick={() => call('test')}>
@@ -683,8 +691,13 @@ function IntTab({ integ, toast }: { integ: { telegram: boolean; telegramWebhook:
           'Создайте бота через @BotFather и задайте в Railway переменные TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID.'
         )}
       </Row>
-      <Row st="не подключено" cls="" t="Онлайн-оплата Payme / Click">
-        Нужны договор и ключи мерчанта. До этого гости платят при получении, онлайн-оплата на сайте честно отмечена как недоступная.
+      <Row st={integ.payme ? 'подключено' : 'не подключено'} cls={integ.payme ? 'ok' : ''} t="Онлайн-оплата Payme">
+        {integ.payme ? 'Гости видят «Онлайн через Payme» в корзине.' : 'Задайте PAYME_MERCHANT_ID и PAYME_KEY в Railway.'} В кабинете Payme Business укажите адрес:{' '}
+        <code>{integ.site || 'https://ваш-сайт'}/api/pay/payme</code>, поле счёта <code>order_id</code>.
+      </Row>
+      <Row st={integ.click ? 'подключено' : 'не подключено'} cls={integ.click ? 'ok' : ''} t="Онлайн-оплата Click">
+        {integ.click ? 'Гости видят «Онлайн через Click» в корзине.' : 'Задайте CLICK_SERVICE_ID, CLICK_MERCHANT_ID и CLICK_SECRET_KEY в Railway.'} В кабинете Click укажите Prepare и Complete URL:{' '}
+        <code>{integ.site || 'https://ваш-сайт'}/api/pay/click</code>.
       </Row>
       <Row st="работает" cls="ok" t="Касса, кухня и печать чеков">
         Экраны персонала: <a href="/staff" style={{ color: 'var(--saffron)' }}>/staff</a>. Вход по PIN из переменной STAFF_PIN (или паролем администратора). Бегунки печатаются по цехам, пречек и чек — на кассе.

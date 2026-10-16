@@ -73,7 +73,7 @@ export default function StaffShell({ menu, settings, children }: { menu: Menu; s
     ['/staff/kitchen', 'Кухня'],
     ['/staff/print', 'Печать'],
   ];
-  const newOnline = orders.filter((o) => o.source === 'site' && o.status === 'new').length;
+  const newOnline = orders.filter((o) => o.source === 'site' && o.status === 'new' && !['pending', 'failed'].includes(o.payStatus)).length;
 
   return (
     <C.Provider value={{ menu, settings, orders, online, refresh, act, toast }}>

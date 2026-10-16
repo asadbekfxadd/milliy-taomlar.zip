@@ -22,7 +22,7 @@ export const orderInput = z.object({
   phone: str(40),
   note: str(500).optional().default(''),
   when: z.union([z.literal('asap'), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)]),
-  pay: z.enum(['cash', 'card']),
+  pay: z.enum(['cash', 'card', 'payme', 'click']),
   website: z.string().optional(), // honeypot, must stay empty
 });
 
@@ -74,6 +74,8 @@ export const settingsSchema = z.object({
   tables: z.coerce.number().int().min(0).max(200),
   servicePct: z.coerce.number().min(0).max(30),
   autoAcceptOnline: z.boolean(),
+  prepMinutes: z.coerce.number().int().min(1).max(240).default(25),
+  deliveryMinutes: z.coerce.number().int().min(0).max(240).default(20),
   printGuestChecks: z.boolean().default(false),
   catStations: z.record(z.string().max(64), z.enum(['kitchen', 'mangal', 'bar'])),
   paper: z.enum(['80', '58']),

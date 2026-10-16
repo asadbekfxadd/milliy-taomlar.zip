@@ -464,3 +464,10 @@ footer{position:relative;border-top:1px solid var(--line);overflow:hidden}
   .lrow.noimg{grid-template-columns:1fr}
   .lrow.noimg .rt{grid-column:1;grid-row:auto}
 }
+
+/* order page: ETA and notifications */
+.eta{display:flex;flex-direction:column;gap:4px;padding:22px 24px;margin-bottom:8px;border:1px solid rgba(227,164,62,.45);border-radius:16px;background:radial-gradient(circle at 0 0,rgba(227,164,62,.12),transparent 60%)}
+.eta b{font-family:var(--display);font-size:clamp(56px,10vw,96px);font-weight:600;line-height:.95;color:var(--cream)}
+.notify{display:flex;flex-direction:column;gap:10px;margin-top:22px;padding:18px 20px;border:1px solid var(--line-2);border-radius:16px}
+.notify-row{display:flex;gap:10px;flex-wrap:wrap}
+.chip-ok{display:inline-flex;align-items:center;padding:9px 14px;border-radius:999px;border:1px solid rgba(92,192,138,.5);color:var(--ok);font-size:13px;font-weight:600}

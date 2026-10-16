@@ -5,6 +5,7 @@ import { cartKey } from '@/lib/pricing';
 import DishModal from './DishModal';
 
 type Ctx = {
+  online: { payme: boolean; click: boolean };
   menu: Menu;
   settings: Settings;
   cart: CartItem[];
@@ -26,7 +27,7 @@ export const useSite = () => {
 
 const LS_KEY = 'mt-cart';
 
-export default function Providers({ menu, settings, children }: { menu: Menu; settings: Settings; children: React.ReactNode }) {
+export default function Providers({ menu, settings, online = { payme: false, click: false }, children }: { menu: Menu; settings: Settings; online?: { payme: boolean; click: boolean }; children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [ready, setReady] = useState(false);
   const [dish, setDish] = useState<string | null>(null);
@@ -72,6 +73,7 @@ export default function Providers({ menu, settings, children }: { menu: Menu; se
   );
 
   const value: Ctx = {
+    online,
     menu,
     settings,
     cart: valid,

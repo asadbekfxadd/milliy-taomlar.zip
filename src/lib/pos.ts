@@ -1,6 +1,8 @@
 import 'server-only';
 import type { Menu, OrderItem, Settings } from './types';
-import { getOrder, mapOrder, q, type OrderRow } from './db';
+import { getOrder, mapOrder, q, setOrderStatus, type OrderRow } from './db';
+import { notifyNewOrder, refreshOrderMessage } from './telegram';
+import { etaText, paidText, stageText, tellGuest } from './notify';
 import { modsOf, unitPrice } from './pricing';
 
 /* Restaurant floor logic shared by the waiter screen, online orders, kitchen screen and print station. */
@@ -39,7 +41,52 @@ export async function saveItems(o: OrderRow, items: OrderItem[], st: Settings, e
     `UPDATE orders SET items = $2, subtotal = $3, service = $4, total = $5, updated_at = now()${sets ? ', ' + sets : ''} WHERE id = $1 RETURNING *`,
     [o.id, JSON.stringify(items), t.subtotal, t.service, t.total, ...keys.map((k) => extra[k])],
   );
-  return mapOrder(r.rows[0]);
+  const saved = mapOrder(r.rows[0]);
+  await afterChange(o, saved, st);
+  return saved;
+}
+
+/** One place that reacts to a status change: tells the guest and refreshes the staff Telegram card. */
+export async function afterChange(prev: OrderRow, next: OrderRow, st: Settings) {
+  if (prev.status === next.status) return;
+  try {
+    await tellGuest(next, stageText(next, st.phone));
+    if (next.source === 'site') await refreshOrderMessage(next);
+  } catch (e) {
+    console.error('afterChange', e);
+  }
+}
+
+export async function updateStatus(id: string, status: string, st: Settings) {
+  const prev = await getOrder(id);
+  if (!prev) return null;
+  const next = await setOrderStatus(id, status);
+  if (next) await afterChange(prev, next, st);
+  return next;
+}
+
+export async function adjustEta(o: OrderRow, minutes: number) {
+  const r = await q(`UPDATE orders SET eta_at = COALESCE(eta_at, now()) + make_interval(mins => $2), updated_at = now() WHERE id = $1 RETURNING *`, [o.id, minutes]);
+  const next = mapOrder(r.rows[0]);
+  await tellGuest(next, etaText(next)).catch(() => {});
+  return next;
+}
+
+/** A provider confirmed the money: mark paid, tell staff and guest, and (if enabled) send to the kitchen. */
+export async function markPaid(orderId: string, provider: string, st: Settings) {
+  const r = await q(
+    `UPDATE orders SET pay_status = 'paid', paid_with = $2, paid_at = now(), updated_at = now() WHERE id = $1 RETURNING *`,
+    [orderId, provider],
+  );
+  let o = r.rows[0] ? mapOrder(r.rows[0]) : null;
+  if (!o) return null;
+  await tellGuest(o, paidText(o)).catch(() => {});
+  if (!o.tgMessageId) {
+    const mid = await notifyNewOrder(o).catch(() => null);
+    if (mid) await q('UPDATE orders SET tg_message_id = $2 WHERE id = $1', [o.id, mid]);
+  } else await refreshOrderMessage(o).catch(() => {});
+  if (st.autoAcceptOnline && o.status === 'new') o = (await sendToKitchen(o, st, { slip: true })).order;
+  return o;
 }
 
 /** Where the order is going, as printed on tickets: "Стол 7", "Онлайн · Доставка". */
@@ -67,7 +114,13 @@ export async function sendToKitchen(o: OrderRow, st: Settings, opts: { slip?: bo
     l.at = now;
   });
   const status = ['new', 'accepted'].includes(o.status) ? 'accepted' : o.status === 'ready' ? 'cooking' : o.status;
-  const saved = await saveItems(o, items, st, { status });
+  const extra: Record<string, unknown> = { status };
+  if (!o.acceptedAt) {
+    const mins = (st.prepMinutes || 25) + (o.type === 'delivery' ? st.deliveryMinutes || 0 : 0);
+    extra.accepted_at = new Date(now).toISOString();
+    extra.eta_at = new Date(now + mins * 60000).toISOString();
+  }
+  const saved = await saveItems(o, items, st, extra);
   const byStation = new Map<string, OrderItem[]>();
   fresh.forEach(({ l }) => byStation.set(l.station || 'kitchen', [...(byStation.get(l.station || 'kitchen') || []), l]));
   const jobs: Job[] = [...byStation].map(([station, lines]) => ({
@@ -127,7 +180,10 @@ export async function kitchenMove(id: string, lineIdx: number[], to: 'cooking' |
 
 export async function openOrders() {
   const r = await q(
-    `SELECT * FROM orders WHERE status NOT IN ('done','cancelled') OR (updated_at > now() - interval '20 minutes') ORDER BY created_at ASC LIMIT 300`,
+    `SELECT * FROM orders
+      WHERE (status NOT IN ('done','cancelled') OR updated_at > now() - interval '20 minutes')
+        AND NOT (status = 'new' AND pay_status IN ('pending','failed') AND created_at < now() - interval '3 hours')
+      ORDER BY created_at ASC LIMIT 300`,
   );
   return r.rows.map(mapOrder);
 }

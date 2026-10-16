@@ -1,7 +1,7 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStaff } from './StaffShell';
-import { PAY_RU, STATION_RU, mins, placeOf, type StaffOrder } from './types';
+import { PAY_RU, STATION_RU, clock, mins, placeOf, type StaffOrder } from './types';
 import { fmt, prettyPhone } from '@/lib/format';
 import { basePrice, unitPrice } from '@/lib/pricing';
 import type { Dish } from '@/lib/types';
@@ -16,6 +16,7 @@ export default function Pos() {
   const [paying, setPaying] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<'board' | 'hall'>('board');
 
   const open = orders.filter((o) => !['done', 'cancelled'].includes(o.status));
   const online = open.filter((o) => o.source === 'site');
@@ -56,6 +57,21 @@ export default function Pos() {
     <div className={`pos ${cur ? 'has-sel' : ''}`}>
       {/* ---------- floor ---------- */}
       <section className="pos-floor">
+        <div className="pos-views">
+          <button className={view === 'board' ? 'on' : ''} onClick={() => setView('board')}>
+            Все заказы <span className="num">{open.length}</span>
+          </button>
+          <button className={view === 'hall' ? 'on' : ''} onClick={() => setView('hall')}>
+            Зал и столы
+          </button>
+          <button className="sx-btn ghost" disabled={busy} onClick={() => openTable(null, 'pickup')}>
+            + С собой
+          </button>
+        </div>
+        {view === 'board' ? (
+          <Board orders={open} sel={sel} onSel={setSel} />
+        ) : (
+        <>
         {online.length > 0 && (
           <div className="pos-block">
             <h2>Заказы с сайта</h2>
@@ -75,9 +91,6 @@ export default function Pos() {
         <div className="pos-block">
           <div className="pos-head">
             <h2>Зал</h2>
-            <button className="sx-btn ghost" disabled={busy} onClick={() => openTable(null, 'pickup')}>
-              + С собой
-            </button>
           </div>
           {tables.length ? (
             <div className="pos-tables">
@@ -100,7 +113,7 @@ export default function Pos() {
 
         {takeaway.length > 0 && (
           <div className="pos-block">
-            <h2>С собой</h2>
+            <h2>С собой (касса)</h2>
             <div className="pos-cards">
               {takeaway.map((o) => (
                 <button key={o.id} className={`pos-card ${sel === o.id ? 'sel' : ''}`} onClick={() => setSel(o.id)}>
@@ -111,6 +124,8 @@ export default function Pos() {
               ))}
             </div>
           </div>
+        )}
+        </>
         )}
       </section>
 
@@ -125,7 +140,7 @@ export default function Pos() {
           <>
             <div className="pos-check-head">
               <button className="sx-link back" onClick={() => setSel(null)}>
-                ← Зал
+                ← Все заказы
               </button>
               <div>
                 <h2>{placeOf(cur)}</h2>
@@ -152,6 +167,21 @@ export default function Pos() {
                 </div>
                 {cur.note && <div className="pos-note">💬 {cur.note}</div>}
               </div>
+            )}
+
+            <div className="pos-meta">
+              <PayBadge o={cur} />
+              {cur.etaAt && ['accepted', 'cooking'].includes(cur.status) && (
+                <span className="pos-eta">
+                  к <b className="num">{clock(cur.etaAt)}</b>
+                  <button onClick={() => run({ action: 'eta', minutes: -5 }, 'Время обновлено')}>−5</button>
+                  <button onClick={() => run({ action: 'eta', minutes: 5 }, 'Гостю отправлено новое время')}>+5</button>
+                  <button onClick={() => run({ action: 'eta', minutes: 10 }, 'Гостю отправлено новое время')}>+10</button>
+                </span>
+              )}
+            </div>
+            {cur.payStatus === 'pending' && cur.status === 'new' && (
+              <div className="pos-warn">Гость ещё не оплатил онлайн. Заказ уйдёт на кухню сам после оплаты. Принять вручную — только если гость платит иначе.</div>
             )}
 
             <div className="pos-lines">
@@ -214,18 +244,27 @@ export default function Pos() {
 
             {!closed && (
               <>
-                <div className={`pos-actions ${settings.printGuestChecks ? '' : 'two'}`}>
+                <div className="pos-actions">
                   <button className="sx-btn primary" disabled={!unsent || busy} onClick={() => run({ action: cur.status === 'new' ? 'accept' : 'send' }, 'Отправлено на кухню, бегунки печатаются')}>
                     {cur.status === 'new' ? 'Принять и на кухню' : `На кухню${unsent ? ` (${unsent})` : ''}`}
+                  </button>
+                  <button className="sx-btn" disabled={busy || !cur.items.some((l) => l.sent) || cur.status === 'ready'} onClick={() => run({ action: 'ready' }, 'Гостю отправлено: заказ готов')}>
+                    {cur.type === 'delivery' ? 'Передать курьеру' : cur.type === 'pickup' ? 'Готов к выдаче' : 'Готово'}
                   </button>
                   {settings.printGuestChecks && (
                     <button className="sx-btn" disabled={!cur.items.length || busy} onClick={() => run({ action: 'precheck' }, 'Пречек отправлен на печать')}>
                       Пречек
                     </button>
                   )}
-                  <button className="sx-btn ok" disabled={!cur.items.length || unsent > 0 || busy} onClick={() => setPaying(true)}>
-                    Оплата
-                  </button>
+                  {cur.payStatus === 'paid' ? (
+                    <button className="sx-btn ok" disabled={unsent > 0 || busy} onClick={async () => (await run({ action: 'complete' }, 'Заказ закрыт')) && setSel(null)}>
+                      {cur.type === 'delivery' ? 'Доставлен' : 'Выдан'}
+                    </button>
+                  ) : (
+                    <button className="sx-btn ok" disabled={!cur.items.length || unsent > 0 || busy} onClick={() => setPaying(true)}>
+                      Оплата
+                    </button>
+                  )}
                 </div>
 
                 <div className="pos-menu">
@@ -396,6 +435,66 @@ function PayModal({ o, onClose, onPay }: { o: StaffOrder; onClose: () => void; o
         </div>
         <p className="sx-muted small">Фискальный чек гостю выбивается на вашей онлайн-кассе.</p>
       </div>
+    </div>
+  );
+}
+
+function PayBadge({ o }: { o: StaffOrder }) {
+  if (o.payStatus === 'paid') return <span className="chip ok">оплачено {o.paidWith === 'payme' ? 'Payme' : o.paidWith === 'click' ? 'Click' : PAY_RU[o.paidWith] || ''}</span>;
+  if (o.payStatus === 'pending') return <span className="chip warn">ждём оплату {o.pay === 'payme' ? 'Payme' : 'Click'}</span>;
+  if (o.payStatus === 'failed') return <span className="chip bad">оплата не прошла</span>;
+  if (o.payStatus === 'refunded') return <span className="chip">возврат</span>;
+  return <span className="chip">к оплате{o.source === 'site' ? `: ${o.pay === 'card' ? 'карта' : 'наличные'}` : ''}</span>;
+}
+
+const COLS: [string, string, (o: StaffOrder) => boolean][] = [
+  ['new', 'Новые', (o) => o.status === 'new'],
+  ['kitchen', 'На кухне', (o) => o.status === 'accepted' || o.status === 'cooking'],
+  ['ready', 'Готовы · выдать', (o) => o.status === 'ready'],
+];
+
+function Board({ orders, sel, onSel }: { orders: StaffOrder[]; sel: string | null; onSel: (id: string) => void }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((x) => x + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="board">
+      {COLS.map(([k, title, fn]) => {
+        const list = orders.filter(fn);
+        return (
+          <div key={k} className="board-col">
+            <h2>
+              {title} <span className="chip">{list.length}</span>
+            </h2>
+            {list.length ? (
+              list.map((o) => {
+                const late = o.etaAt && Date.now() > new Date(o.etaAt).getTime() && o.status !== 'ready';
+                return (
+                  <button key={o.id} className={`bcard ${o.status === 'new' && !['pending', 'failed'].includes(o.payStatus) ? 'alert' : ''} ${sel === o.id ? 'sel' : ''} ${late ? 'late' : ''}`} onClick={() => onSel(o.id)}>
+                    <div className="bcard-top">
+                      <b>{placeOf(o)}</b>
+                      <span className="num">№ {o.no}</span>
+                    </div>
+                    <div className="bcard-mid">
+                      <span className={`kind ${o.type}`}>{o.type === 'delivery' ? 'Доставка' : o.type === 'pickup' ? 'С собой' : 'Зал'}</span>
+                      <PayBadge o={o} />
+                    </div>
+                    <div className="bcard-bot">
+                      <span className="num">{fmt(o.total)} сум</span>
+                      <span className="num">{o.etaAt && o.status !== 'ready' ? `к ${clock(o.etaAt)}` : `${mins(o.createdAt)} мин`}</span>
+                    </div>
+                    {o.source === 'site' && <span className="sx-muted small">{o.name} · {prettyPhone(o.phone)}</span>}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="pos-empty small">Пусто</div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

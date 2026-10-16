@@ -11,7 +11,7 @@ import { fmt, normalizePhone } from '@/lib/format';
 type Errors = Partial<Record<'name' | 'phone' | 'address' | 'time' | 'zone', string>>;
 
 export default function CartView() {
-  const { menu, settings: st, cart, setQty, remove, clear } = useSite();
+  const { menu, settings: st, cart, setQty, remove, clear, online } = useSite();
   const router = useRouter();
   const { lines, subtotal } = useMemo(() => priceCart(menu, cart), [menu, cart]);
   const types = [st.pickup && 'pickup', st.delivery && 'delivery'].filter(Boolean) as ('pickup' | 'delivery')[];
@@ -19,7 +19,7 @@ export default function CartView() {
   const [zone, setZone] = useState(0);
   const [f, setF] = useState({ name: '', phone: '', address: '', note: '', time: '', website: '' });
   const [when, setWhen] = useState<'asap' | 'time'>('asap');
-  const [pay, setPay] = useState<'cash' | 'card'>(st.pay.cash ? 'cash' : 'card');
+  const [pay, setPay] = useState<'cash' | 'card' | 'payme' | 'click'>(online.payme ? 'payme' : online.click ? 'click' : st.pay.cash ? 'cash' : 'card');
   const [errors, setErrors] = useState<Errors>({});
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -81,6 +81,10 @@ export default function CartView() {
         localStorage.setItem('mt-contact', JSON.stringify({ name: f.name, phone: f.phone, address: f.address }));
       } catch {}
       clear();
+      if (j.payUrl) {
+        window.location.href = j.payUrl;
+        return;
+      }
       router.push(`/order/${j.id}?t=${j.token}`);
     } catch {
       setMsg('Нет связи с сервером. Корзина сохранена, попробуйте ещё раз.');
@@ -241,16 +245,30 @@ export default function CartView() {
                       </label>
                     </div>
                   )}
-                  <div className="opt off" aria-disabled="true">
-                    <label>
-                      <input type="radio" disabled />
-                      <span>
-                        Payme / Click онлайн
-                        <br />
-                        <span className="cap">Пока не подключено. Оплатите при получении.</span>
-                      </span>
-                    </label>
-                  </div>
+                  {online.payme && (
+                    <div className={`opt ${pay === 'payme' ? 'on' : ''}`}>
+                      <label>
+                        <input type="radio" name="pay" checked={pay === 'payme'} onChange={() => setPay('payme')} />
+                        <span>
+                          Онлайн через Payme
+                          <br />
+                          <span className="cap">Заказ уйдёт на кухню сразу после оплаты</span>
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                  {online.click && (
+                    <div className={`opt ${pay === 'click' ? 'on' : ''}`}>
+                      <label>
+                        <input type="radio" name="pay" checked={pay === 'click'} onChange={() => setPay('click')} />
+                        <span>
+                          Онлайн через Click
+                          <br />
+                          <span className="cap">Заказ уйдёт на кухню сразу после оплаты</span>
+                        </span>
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -284,7 +302,7 @@ export default function CartView() {
                 </div>
               )}
               <button className="btn full" disabled={short > 0 || !types.length || busy}>
-                {busy ? 'Отправляем…' : 'Отправить заказ'}
+                {busy ? 'Отправляем…' : pay === 'payme' || pay === 'click' ? `Перейти к оплате · ${fmt(subtotal + fee)} сум` : 'Отправить заказ'}
               </button>
               <p className="cap full" style={{ margin: 0 }}>
                 Имя, телефон и адрес нужны только для выполнения этого заказа.

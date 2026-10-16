@@ -71,7 +71,25 @@ CREATE TABLE IF NOT EXISTS print_jobs (
   claimed_at  timestamptz,
   printed_at  timestamptz
 );
-CREATE INDEX IF NOT EXISTS print_jobs_pending_idx ON print_jobs (station) WHERE printed_at IS NULL;`;
+CREATE INDEX IF NOT EXISTS print_jobs_pending_idx ON print_jobs (station) WHERE printed_at IS NULL;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS pay_status    text NOT NULL DEFAULT 'unpaid';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS accepted_at   timestamptz;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS eta_at        timestamptz;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_chat bigint;
+CREATE TABLE IF NOT EXISTS payments (
+  id           serial PRIMARY KEY,
+  provider     text NOT NULL,
+  ext_id       text NOT NULL,
+  order_id     text NOT NULL,
+  amount       bigint NOT NULL,
+  state        integer NOT NULL DEFAULT 1,
+  reason       integer,
+  create_time  bigint NOT NULL,
+  perform_time bigint NOT NULL DEFAULT 0,
+  cancel_time  bigint NOT NULL DEFAULT 0,
+  UNIQUE (provider, ext_id)
+);
+CREATE INDEX IF NOT EXISTS payments_order_idx ON payments (order_id);`;
 
 function ready() {
   if (!g.pgReady)
@@ -98,6 +116,7 @@ export type OrderRow = {
   name: string; phone: string; note: string; when: string; pay: string; items: any; subtotal: number; total: number;
   tgMessageId: number | null; createdAt: string;
   source: string; tableNo: number | null; guests: number; waiter: string; service: number; paidWith: string; paidAt: string | null;
+  payStatus: string; acceptedAt: string | null; etaAt: string | null; customerChat: number | null;
 };
 export const mapOrder = (r: any): OrderRow => ({
   id: r.id, no: r.no, token: r.token, status: r.status, type: r.type, zone: r.zone, fee: r.fee, address: r.address,
@@ -105,6 +124,8 @@ export const mapOrder = (r: any): OrderRow => ({
   tgMessageId: r.tg_message_id === null || r.tg_message_id === undefined ? null : Number(r.tg_message_id), createdAt: new Date(r.created_at).toISOString(),
   source: r.source ?? 'site', tableNo: r.table_no ?? null, guests: r.guests ?? 0, waiter: r.waiter ?? '', service: r.service ?? 0,
   paidWith: r.paid_with ?? '', paidAt: r.paid_at ? new Date(r.paid_at).toISOString() : null,
+  payStatus: r.pay_status ?? 'unpaid', acceptedAt: r.accepted_at ? new Date(r.accepted_at).toISOString() : null,
+  etaAt: r.eta_at ? new Date(r.eta_at).toISOString() : null, customerChat: r.customer_chat ? Number(r.customer_chat) : null,
 });
 
 export async function getOrder(id: string) {

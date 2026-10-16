@@ -14,6 +14,8 @@ export const STATUS_RU: Record<string, string> = {
   cancelled: '✖️ Отменён',
 };
 
+export const tg = (method: string, body: unknown) => api(method, body);
+
 const api = (method: string, body: unknown) => {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return Promise.resolve(null);
@@ -34,8 +36,9 @@ const h = (s: string) => String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;
 
 type O = {
   id: string; no: number; status: string; type: string; zone: string; address: string; name: string; phone: string;
-  note: string; when: string; pay: string; fee: number; total: number; items: any;
+  note: string; when: string; pay: string; fee: number; total: number; items: any; payStatus?: string; source?: string; tableNo?: number | null;
 };
+const PAY_TXT: Record<string, string> = { cash: 'Наличные', card: 'Карта при получении', payme: 'Payme', click: 'Click' };
 
 export function orderText(o: O) {
   const items = (o.items as { name: string; mods: string; qty: number; sum: number }[])
@@ -43,10 +46,10 @@ export function orderText(o: O) {
     .join('\n');
   return [
     `<b>Заказ № ${o.no}</b> · ${STATUS_RU[o.status] ?? o.status}`,
-    o.type === 'delivery' ? `🚗 Доставка: ${h(o.zone)}\n📍 ${h(o.address)}` : '🛍 Самовывоз',
+    o.type === 'delivery' ? `🚗 Доставка: ${h(o.zone)}\n📍 ${h(o.address)}` : o.type === 'hall' ? `🍽 Стол ${o.tableNo ?? ''}` : '🛍 Самовывоз',
     `👤 ${h(o.name)} · <code>${h(prettyPhone(o.phone))}</code>`,
     o.when !== 'asap' ? `⏰ Ко времени: ${h(o.when)}` : '⏰ Как можно скорее',
-    `💳 ${o.pay === 'card' ? 'Карта при получении' : 'Наличные'}`,
+    `💳 ${PAY_TXT[o.pay] || o.pay}${o.payStatus === 'paid' ? ' · ✅ оплачено' : o.payStatus === 'pending' ? ' · ⏳ ждём оплату' : ''}`,
     '',
     items,
     o.fee ? `Доставка — ${fmt(o.fee)}` : '',
@@ -94,7 +97,17 @@ export async function setWebhook() {
   const url = process.env.PUBLIC_URL?.replace(/\/$/, '');
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!url || !secret) return { ok: false, description: 'Нужны PUBLIC_URL и TELEGRAM_WEBHOOK_SECRET' };
-  return api('setWebhook', { url: `${url}/api/telegram/webhook`, secret_token: secret, allowed_updates: ['callback_query'] });
+  return api('setWebhook', { url: `${url}/api/telegram/webhook`, secret_token: secret, allowed_updates: ['callback_query', 'message'] });
+}
+
+let botName: string | null | undefined;
+/** The bot's @username, used for the guest's "notify me in Telegram" link. */
+export async function botUsername() {
+  if (botName !== undefined) return botName;
+  if (!process.env.TELEGRAM_BOT_TOKEN) return null;
+  const r: any = await api('getMe', {});
+  botName = r?.ok ? r.result.username : null;
+  return botName;
 }
 
 export const sendTest = () =>

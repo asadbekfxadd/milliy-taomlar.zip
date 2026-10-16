@@ -3,6 +3,7 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { loadDoc } from './db';
 import { D, DEFAULT_CATS, DEFAULT_DISHES, DEFAULT_SETTINGS } from './defaults';
 import type { Menu, Settings } from './types';
+import { providers } from './payments';
 
 export async function getMenu(): Promise<Menu> {
   noStore();
@@ -29,6 +30,6 @@ export async function getSettings(): Promise<Settings> {
 export const integrations = () => ({
   telegram: Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID),
   telegramWebhook: Boolean(process.env.TELEGRAM_WEBHOOK_SECRET && process.env.PUBLIC_URL),
-  payme: false,
-  click: false,
+  ...providers(),
+  site: (process.env.PUBLIC_URL || '').replace(/\/$/, ''),
 });
