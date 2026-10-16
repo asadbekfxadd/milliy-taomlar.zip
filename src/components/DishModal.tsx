@@ -48,14 +48,16 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-labelledby="dlgT">
       <div className="scrim" onClick={onClose} />
-      <div className="sheet" ref={sheet}>
+      <div className={`sheet ${d.photo ? '' : 'solo'}`} ref={sheet}>
         <button className="x" onClick={onClose} aria-label="Закрыть">
           ×
         </button>
-        <div style={{ position: 'relative' }}>
-          <Tags d={d} />
-          <DishArt art={d.art} photo={d.photo} label={d.ru} eager />
-        </div>
+        {d.photo && (
+          <div style={{ position: 'relative' }}>
+            <Tags d={d} />
+            <DishArt art={d.art} photo={d.photo} label={d.ru} eager />
+          </div>
+        )}
         <div className="body">
           <div>
             <div className="cap" style={{ letterSpacing: '.12em', textTransform: 'uppercase' }}>

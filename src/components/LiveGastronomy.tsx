@@ -26,7 +26,7 @@ export default function LiveGastronomy() {
         const r = c.getBoundingClientRect();
         const W = Math.round(r.width * Math.min(innerWidth < 1020 ? 1.25 : 1.75, devicePixelRatio || 1));
         c.width = c.height = W;
-        m.LIVE.layers = null;
+        m.GRILL.W = 0;
         lastP = -1;
       };
       size();
@@ -40,7 +40,7 @@ export default function LiveGastronomy() {
           const W = c.width;
           if (Math.abs(p - lastP) > 0.0005 || p > 0.86) {
             const g = c.getContext('2d')!;
-            m.drawLive(g, W, W, p);
+            m.drawLiveGrill(g, W, W, p);
             if (p > 0.86 && !rm) {
               if (steam.length < 34 && Math.random() < 0.4) steam.push({ x: W / 2 + (Math.random() - 0.5) * W * 0.3, y: W * 0.5, r: W * 0.05, l: 0, m: 200 + Math.random() * 120 });
               g.save();
@@ -85,12 +85,12 @@ export default function LiveGastronomy() {
   }, []);
 
   return (
-    <section className="live" id="live" ref={sec} aria-label="Живая гастрономия: как готовят плов">
+    <section className="live" id="live" ref={sec} aria-label="Живая гастрономия: как жарят шашлык">
       <div className="live-stage g">
         <div className="live-copy">
           <div className="kicker">Живая гастрономия</div>
           <h2>
-            Пять шагов <em>до лагана</em>
+            Пять шагов <em>до тарелки</em>
           </h2>
           <ol className="steps">
             {LIVE_STEPS.map((s, i) => (

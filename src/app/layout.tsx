@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
   const base = process.env.PUBLIC_URL || 'http://localhost:3000';
   const title = `${s.name} — вкус, в котором живёт Узбекистан`;
-  const description = `Узбекская кухня: плов из казана, самса из тандыра, шашлык на углях, шурпа и лагман. ${s.tagline}.`;
+  const description = `Шашлык на углях, бризоль, лагман и узбекская кухня в Янгиюле. ${s.tagline}.`;
   return {
     metadataBase: new URL(base),
     title: { default: title, template: `%s · ${s.name}` },

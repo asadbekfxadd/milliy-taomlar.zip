@@ -103,7 +103,7 @@ export default function CartView() {
             {lines.length ? (
               lines.map((l) => (
                 <div className="ci" key={l.key}>
-                  <DishArt art={l.d.art} photo={l.d.photo} className="round" label={l.d.ru} />
+                  {l.d.photo ? <DishArt art={l.d.art} photo={l.d.photo} className="round" label={l.d.ru} /> : <div className="mono" aria-hidden="true">{l.d.name.charAt(0)}</div>}
                   <h4>{l.d.name}</h4>
                   <div className="mods">
                     {l.d.ru}
@@ -132,7 +132,7 @@ export default function CartView() {
             ) : (
               <div className="empty" style={{ textAlign: 'left', padding: '30px 0' }}>
                 <h3 style={{ fontSize: 40, fontStyle: 'italic', color: 'var(--cream)', marginBottom: 12 }}>Пока пусто</h3>
-                Начните с плова: его готовят один раз в день, и он заканчивается первым.
+                Начните с шашлыка из баранины: его жарят на углях прямо перед подачей.
                 <div style={{ marginTop: 24, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <Link className="btn" href="/menu">
                     Открыть меню

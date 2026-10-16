@@ -125,12 +125,17 @@ export function DishBody({ d }: { d: Dish }) {
 export function DishRow({ d }: { d: Dish }) {
   const { openDish } = useSite();
   return (
-    <div className="lrow">
-      <Opener d={d} style={{ gridRow: '1/3' }}>
-        <DishArt art={d.art} photo={d.photo} className="round" label={d.ru} />
-      </Opener>
+    <div className={`lrow ${d.photo ? '' : 'noimg'}`}>
+      {d.photo && (
+        <Opener d={d} style={{ gridRow: '1/3' }}>
+          <DishArt art={d.art} photo={d.photo} className="round" label={d.ru} />
+        </Opener>
+      )}
       <h4 style={{ cursor: 'pointer' }} onClick={() => openDish(d.id)}>
         {d.name}
+        {d.tags.filter((t) => t === 'hit' || t === 'chef').map((t) => (
+          <span key={t} className={`mini ${t}`}>{TAGS[t]}</span>
+        ))}
       </h4>
       <div className="d">
         {d.ru} · {d.desc}

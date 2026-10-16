@@ -97,7 +97,10 @@ export default function MenuView() {
         <div className="in">
           {groups.length ? (
             groups.map(({ c, ds }, ci) => {
-              const [a, b, cc, ...rest] = ds;
+              const withPhoto = ds.filter((d) => d.photo);
+              const [a, b, cc] = withPhoto;
+              const shown = new Set([a, b, cc].filter(Boolean).map((d) => d!.id));
+              const rest = ds.filter((d) => !shown.has(d.id));
               return (
                 <section key={c.id} className="catsec" id={'cat-' + c.id} data-catsec={c.id}>
                   <div className="cat-h">

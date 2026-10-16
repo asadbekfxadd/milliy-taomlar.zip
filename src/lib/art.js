@@ -322,3 +322,73 @@ const ART={plov:drawPlov,somsa:drawSomsa,shashlik:drawShashlik,lagmon:drawLagmon
 const ART_LABELS={plov:'Плов',somsa:'Самса',shashlik:'Шашлык',lagmon:'Лагман',non:'Лепёшка',manti:'Манты',shurva:'Шурпа/суп',kazan:'Казан-кабоб',salad:'Салат',tea:'Чай',chakchak:'Чак-чак/сладкое','glass-mango':'Напиток манго','glass-kompot':'Компот','glass-ayron':'Айран/сюзьма',spices:'Специи'};
 
 export { ART, ART_LABELS, drawLive, LIVE, clamp, seg, drawPlov };
+
+/* ---------- brizol: meat patty wrapped in a thin egg crepe ---------- */
+function drawBrizol(c,W,H){
+  const R=rng(311),cx=W/2,cy=H/2,P=W*.46;lagan(c,cx,cy,P,R);
+  // garnish: fries + tomato
+  for(let i=0;i<16;i++){const a=Math.PI*(.15+R()*.55),rr=P*(.45+R()*.2);c.save();c.translate(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr);c.rotate(R()*3);
+    shadowed(c,P*.02,P*.01,()=>{c.fillStyle=radial(c,0,0,P*.06,[[0,'#F6D27A'],[1,'#D9962E']]);c.beginPath();c.roundRect(-P*.07,-P*.014,P*.14,P*.028,P*.01);c.fill()},'rgba(60,30,5,.4)');c.restore()}
+  for(let i=0;i<3;i++){const a=Math.PI*(1.1+i*.18),x=cx+Math.cos(a)*P*.52,y=cy+Math.sin(a)*P*.52,r=P*.1;c.fillStyle='#C42B22';c.beginPath();c.arc(x,y,r,0,7);c.fill();c.fillStyle='#E0473B';c.beginPath();c.arc(x,y,r*.85,0,7);c.fill();c.fillStyle='rgba(255,190,160,.6)';for(let k=0;k<5;k++){const b=k/5*7;c.beginPath();c.ellipse(x+Math.cos(b)*r*.45,y+Math.sin(b)*r*.45,r*.18,r*.1,b,0,7);c.fill()}gloss(c,x,y,r,.3)}
+  // brizol: folded egg crepe
+  const bx=cx-P*.05,by=cy-P*.02,bw=P*.48,bh=P*.32;
+  shadowed(c,P*.08,P*.03,()=>{c.fillStyle='#C98A2E';c.beginPath();c.ellipse(bx,by,bw,bh,-.25,0,7);c.fill()},'rgba(50,25,5,.6)');
+  c.save();c.beginPath();c.ellipse(bx,by,bw,bh,-.25,0,7);c.clip();
+  c.fillStyle=radial(c,bx,by,bw,[[0,'#F7D27A'],[.6,'#E9B24F'],[1,'#B9772A']]);c.fillRect(bx-bw,by-bh*2,bw*2,bh*4);
+  for(let i=0;i<70;i++){c.fillStyle=`rgba(${120+R()*40},${60+R()*30},20,${.15+R()*.3})`;blob(c,bx+(R()-.5)*bw*1.8,by+(R()-.5)*bh*1.8,P*(.01+R()*.03),R,7);c.fill()}
+  // fold line + peeking filling
+  c.strokeStyle='rgba(120,70,20,.55)';c.lineWidth=P*.012;c.beginPath();c.moveTo(bx-bw*.9,by+bh*.25);c.quadraticCurveTo(bx,by+bh*.55,bx+bw*.9,by-bh*.05);c.stroke();
+  c.fillStyle='rgba(110,50,25,.55)';c.beginPath();c.ellipse(bx+bw*.15,by+bh*.42,bw*.45,bh*.12,-.18,0,7);c.fill();
+  c.restore();gloss(c,bx,by,bw,.22);
+  // cheese drizzle + herbs
+  c.strokeStyle='rgba(255,236,170,.85)';c.lineWidth=P*.012;c.lineCap='round';for(let i=0;i<4;i++){c.beginPath();c.moveTo(bx-bw*.6+i*bw*.35,by-bh*.4);c.quadraticCurveTo(bx-bw*.4+i*bw*.35,by,bx-bw*.55+i*bw*.35,by+bh*.3);c.stroke()}
+  for(let i=0;i<60;i++){c.fillStyle='#3F7E2A';c.beginPath();c.ellipse(bx+(R()-.5)*bw*1.6,by+(R()-.5)*bh*1.6,P*.01,P*.005,R()*3,0,7);c.fill()}
+}
+
+/* ---------- scroll scene: mangal from cold coals to served shashlik ---------- */
+const GRILL={W:0,coals:null,skewers:null,garnish:null};
+function grillSetup(W,H){
+  const R=rng(421),cx=W/2,cy=H/2,gw=W*.86,gh=H*.5;
+  const coals=[];for(let i=0;i<420;i++)coals.push({x:cx+(R()-.5)*gw*.92,y:cy+(R()-.5)*gh*.82,r:W*(.008+R()*.014),sd:(R()*1e9)|0,t:R()});
+  const skewers=[];const n=6;for(let i=0;i<n;i++){const x=cx-gw*.38+i*(gw*.76/(n-1));const chunks=[];for(let k=0;k<5;k++)chunks.push({y:cy-gh*.36+k*gh*.18,r:W*(.032+R()*.008),sd:(R()*1e9)|0,fat:k===2&&i%2===0});skewers.push({x,chunks,d:R()})}
+  const garnish=[];for(let i=0;i<46;i++)garnish.push({x:cx+(R()-.5)*gw*.9,y:cy+(R()-.5)*gh*.9,r:W*(.012+R()*.016),rot:R()*3,k:R()<.6?'onion':'herb',d:R()});
+  Object.assign(GRILL,{W,coals,skewers,garnish,cx,cy,gw,gh});
+}
+function drawLiveGrill(c,W,H,p){
+  if(GRILL.W!==W)grillSetup(W,H);
+  const G=GRILL,{cx,cy,gw,gh}=G;c.clearRect(0,0,W,H);
+  const heat=ease(seg(p,0,.2)),place=seg(p,.2,.4),cook=ease(seg(p,.4,.72)),smoke=seg(p,.6,.85),serve=ease(seg(p,.85,1));
+  // mangal body
+  shadowed(c,W*.06,W*.02,()=>{c.fillStyle='#171514';c.beginPath();c.roundRect(cx-gw/2,cy-gh/2,gw,gh,W*.02);c.fill()},'rgba(0,0,0,.85)');
+  let g=c.createLinearGradient(0,cy-gh/2,0,cy+gh/2);g.addColorStop(0,'#3A3633');g.addColorStop(1,'#141211');c.fillStyle=g;c.beginPath();c.roundRect(cx-gw/2,cy-gh/2,gw,gh,W*.02);c.fill();
+  const iw=gw*.94,ih=gh*.86;c.fillStyle='#0B0A09';c.beginPath();c.roundRect(cx-iw/2,cy-ih/2,iw,ih,W*.01);c.fill();
+  // coals
+  c.save();c.beginPath();c.rect(cx-iw/2,cy-ih/2,iw,ih);c.clip();
+  // charcoal: dark grey lumps whose cracks glow as the heat rises
+  G.coals.forEach(o=>{const h=clamp(heat*1.2-o.t*.3),gl=h*(.35+.65*((o.sd%97)/97));
+    c.fillStyle=radial(c,o.x,o.y,o.r,[[0,`rgb(${52+gl*170},${40+gl*52},${30+gl*6})`],[.65,`rgb(${36+gl*60},${30+gl*12},28)`],[1,'#121010']]);blob(c,o.x,o.y,o.r,rng(o.sd),7);c.fill()});
+  if(heat>0){c.globalCompositeOperation='screen';c.globalAlpha=.35*heat;const gg=c.createRadialGradient(cx,cy,0,cx,cy,iw*.55);gg.addColorStop(0,'rgba(255,110,30,.6)');gg.addColorStop(1,'rgba(255,60,10,0)');c.fillStyle=gg;c.fillRect(cx-iw/2,cy-ih/2,iw,ih);c.globalAlpha=1;c.globalCompositeOperation='source-over'}
+  c.restore();
+  // skewers
+  G.skewers.forEach((s,i)=>{const t=ease(seg(place,s.d*.5,s.d*.5+.5));if(!t)return;const off=(1-t)*-H*.5;
+    c.save();c.translate(0,off);c.globalAlpha=t;
+    c.strokeStyle='#C9CDD2';c.lineWidth=W*.006;c.beginPath();c.moveTo(s.x,cy-gh*.62);c.lineTo(s.x,cy+gh*.5);c.stroke();
+    c.fillStyle='#8E9399';c.beginPath();c.roundRect(s.x-W*.01,cy-gh*.7,W*.02,gh*.1,3);c.fill();
+    s.chunks.forEach(ch=>{const r=ch.r;
+      const raw=ch.fat?[[0,'#F4E2CC'],[1,'#D8BC98']]:[[0,'#D9767A'],[1,'#A8464C']];
+      const done=ch.fat?[[0,'#F1DDB8'],[1,'#B98A4E']]:[[0,'#A3542A'],[.55,'#6A2D14'],[1,'#2E1207']];
+      const col=(a,b)=>a.map((st,k)=>[st[0],mix(st[1],(b[k]||b[b.length-1])[1],cook)]);
+      shadowed(c,r*.5,r*.3,()=>{c.fillStyle=radial(c,s.x,ch.y,r,col(raw,done));blob(c,s.x,ch.y,r,rng(ch.sd),9,.85);c.fill()},'rgba(0,0,0,.7)');
+      if(!ch.fat&&cook>.3){c.save();blob(c,s.x,ch.y,r,rng(ch.sd),9,.85);c.clip();const k=(cook-.3)/.7;for(let j=0;j<4;j++){c.strokeStyle=`rgba(12,4,0,${.35*k})`;c.lineWidth=r*.14;c.beginPath();c.moveTo(s.x-r,ch.y-r*.5+j*r*.35);c.lineTo(s.x+r,ch.y-r*.2+j*r*.35);c.stroke()}c.restore()}
+      gloss(c,s.x,ch.y,r,.15+cook*.2)});
+    c.restore()});
+  // smoke haze
+  if(smoke>0){c.save();c.globalAlpha=.18*smoke*(1-serve*.5);g=c.createRadialGradient(cx,cy-gh*.2,0,cx,cy-gh*.2,gw*.6);g.addColorStop(0,'rgba(230,225,220,.8)');g.addColorStop(1,'rgba(230,225,220,0)');c.fillStyle=g;c.fillRect(0,0,W,H);c.restore()}
+  // serving garnish
+  if(serve>0)G.garnish.forEach(o=>{const t=ease(seg(serve,o.d*.6,o.d*.6+.4));if(!t)return;c.save();c.globalAlpha=t;c.translate(o.x,o.y-(1-t)*W*.05);c.rotate(o.rot);
+    if(o.k==='onion'){c.strokeStyle='rgba(240,228,236,.9)';c.lineWidth=W*.005;c.beginPath();c.ellipse(0,0,o.r,o.r*.8,0,0,7);c.stroke();c.strokeStyle='rgba(150,60,130,.45)';c.lineWidth=W*.002;c.beginPath();c.ellipse(0,0,o.r*1.08,o.r*.86,0,0,7);c.stroke()}
+    else{c.fillStyle='#3F7E2A';c.beginPath();c.ellipse(0,0,o.r*.6,o.r*.25,0,0,7);c.fill()}c.restore()});
+}
+function mix(a,b,t){const pa=parseInt(a.slice(1),16),pb=parseInt(b.slice(1),16);const r=Math.round(((pa>>16)&255)*(1-t)+((pb>>16)&255)*t),g=Math.round(((pa>>8)&255)*(1-t)+((pb>>8)&255)*t),bl=Math.round((pa&255)*(1-t)+(pb&255)*t);return `rgb(${r},${g},${bl})`}
+ART.brizol=drawBrizol;ART_LABELS.brizol='Бризоль';ART.mangal=(c,W,H)=>drawLiveGrill(c,W,H,.97);
+export { drawLiveGrill, GRILL };

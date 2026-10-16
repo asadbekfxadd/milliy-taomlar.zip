@@ -6,8 +6,8 @@ export default function Scene({ i, s, showHint }: { i: number; s: Settings; show
   const sc = STORY[i];
   const own = s.story?.[i];
   return (
-    <section className={`scene ${i % 2 ? 'rev' : ''}`}>
-      <DishArt art={sc.art} photo={s.storyPhotos?.[i]} label={sc.t} />
+    <section className={`scene ${i % 2 ? 'rev' : ''} ${s.storyPhotos?.[i] ? '' : 'textonly'}`}>
+      {s.storyPhotos?.[i] && <DishArt art={sc.art} photo={s.storyPhotos[i]} label={sc.t} />}
       <div className="txt rv">
         <div className="no">Больше, чем еда · {String(i + 1).padStart(2, '0')} / 06</div>
         <h2>{sc.t}</h2>

@@ -86,7 +86,6 @@ export default function Hero({ s, dish }: { s: Settings; dish?: Dish }) {
       <div ref={lattice} style={{ position: 'absolute', inset: 0, zIndex: -1 }}>
         <Girih w={1600} h={1000} step={200} className="lattice" />
       </div>
-      <div className="edge">Ош · Сомса · Шашлик · Шўрва · Лағмон</div>
       <div className="in">
         <div className="hero-copy">
           <div className="issue">
@@ -115,7 +114,7 @@ export default function Hero({ s, dish }: { s: Settings; dish?: Dish }) {
               Открыть меню
             </Link>
             <button className="btn ghost" onClick={() => document.getElementById('live')?.scrollIntoView({ behavior: 'smooth' })}>
-              Как рождается ош
+              Как жарим шашлык
             </button>
           </div>
         </div>
