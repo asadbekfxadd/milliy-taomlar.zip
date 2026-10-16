@@ -50,7 +50,7 @@ export const DEFAULT_DISHES: Dish[]=[
  D({id:'d26',cat:'desert',name:'Navvot va holva',ru:'Набот и халва',desc:'К чаю: кристаллы набота, кунжутная халва и миндаль.',ingr:['набот','халва','миндаль'],allergens:['кунжут','орехи'],weight:'150 г',price:18000,art:'tea'})
 ];
 export const DEFAULT_SETTINGS: Settings={
-  name:'MILLIY TAOMLAR',tagline:'Традиции, которые объединяют поколения',
+  name:'MANGO',tagline:'Традиции, которые объединяют поколения',
   phone:'+998 97 249 41 11',address:'',city:'Янгиюль, Ташкентская область',hours:'9:00–23:00, пятница — выходной',mapUrl:'https://www.google.com/maps/search/?api=1&query=41.1037812,69.043786&query_place_id=ChIJJcqMm157rjgRvF-UpyjkNyc',instagram:'',telegram:'',
   pickup:true,delivery:true,prepTime:'30–45 минут',minOrder:60000,
   zones:[{name:'Янгиюль, центр',fee:10000,min:60000},{name:'Янгиюль, окраины',fee:15000,min:80000}],

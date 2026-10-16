@@ -41,7 +41,7 @@ export function Header() {
           <StarMark style={{ color: 'var(--saffron)', width: 30, height: 30 }} />
           <span>
             <b>{settings.name}</b>
-            <small>узбекская кухня</small>
+            <small>milliy taomlar · Yangiyul</small>
           </span>
         </Link>
         <nav className="nav" aria-label="Разделы">

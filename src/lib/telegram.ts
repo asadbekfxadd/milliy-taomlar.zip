@@ -98,4 +98,4 @@ export async function setWebhook() {
 }
 
 export const sendTest = () =>
-  api('sendMessage', { chat_id: process.env.TELEGRAM_CHAT_ID, text: 'MILLIY TAOMLAR: уведомления о заказах подключены ✅' });
+  api('sendMessage', { chat_id: process.env.TELEGRAM_CHAT_ID, text: 'MANGO: уведомления о заказах подключены ✅' });
