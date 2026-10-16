@@ -60,6 +60,7 @@ export const settingsSchema = z.object({
   address: str(200),
   city: str(80),
   hours: str(160),
+  mapUrl: z.string().trim().max(500).refine((v) => !v || /^https:\/\//.test(v), 'https only').default(''),
   instagram: str(80),
   telegram: str(80),
   pickup: z.boolean(),

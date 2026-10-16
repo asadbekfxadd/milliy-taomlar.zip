@@ -530,6 +530,7 @@ function SettingsTab({ s, edit, toast }: { s: Settings; edit: (fn: (s: Settings)
         {f('city', 'Город')}
         {f('address', 'Адрес', 'Улица, дом, ориентир')}
         {f('hours', 'Часы работы', 'Например: ежедневно 10:00–23:00')}
+        {f('mapUrl', 'Ссылка на карту', 'https://maps.google.com/... или yandex')}
         {f('instagram', 'Instagram', '@account')}
         {f('telegram', 'Telegram', '@account')}
       </div>

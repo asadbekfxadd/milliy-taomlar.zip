@@ -12,7 +12,7 @@ export default async function ContactsPage() {
   const ed = isAdmin();
   const miss = (t: string) => (ed ? <span className="muted">{t}: заполните в «Управление → Настройки»</span> : null);
   const addr = [s.address, s.city].filter(Boolean).join(', ');
-  const mapQ = encodeURIComponent(addr || 'Янгиюль');
+  const mapHref = s.mapUrl || `https://yandex.uz/maps/?text=${encodeURIComponent(addr || 'Янгиюль')}`;
   return (
     <>
       <section className="masthead g">
@@ -110,10 +110,10 @@ export default async function ContactsPage() {
             )}
           </div>
           <div>
-            <a className="mapcard" href={`https://yandex.uz/maps/?text=${mapQ}`} target="_blank" rel="noopener">
+            <a className="mapcard" href={mapHref} target="_blank" rel="noopener">
               <div>
                 <div className="kicker">Карта</div>
-                <div style={{ fontFamily: 'var(--display)', fontSize: 34, fontWeight: 600, marginTop: 8 }}>Открыть в Яндекс Картах</div>
+                <div style={{ fontFamily: 'var(--display)', fontSize: 34, fontWeight: 600, marginTop: 8 }}>Построить маршрут</div>
                 <div className="cap" style={{ marginTop: 6 }}>
                   {addr}
                 </div>

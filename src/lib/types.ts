@@ -28,6 +28,7 @@ export type Settings = {
   address: string;
   city: string;
   hours: string;
+  mapUrl: string;
   instagram: string;
   telegram: string;
   pickup: boolean;
