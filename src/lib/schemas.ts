@@ -80,6 +80,7 @@ export const settingsSchema = z.object({
   name: str(80),
   tagline: str(200),
   phone: str(40),
+  phone2: str(40).optional().default(''),
   address: str(200),
   city: str(80),
   hours: str(160),

@@ -85,7 +85,7 @@ export function Opener({ d, children, className = '' }: { d: Dish; children: Rea
 
 /** Menu card. `tile` = grid card (row on phones), `feature` = large editorial card. */
 export function DishCard({ d, variant = 'tile', eager = false }: { d: Dish; variant?: 'tile' | 'feature'; eager?: boolean }) {
-  const { lang, openDish } = useSite();
+  const { lang, openDish, t } = useSite();
   const sub = dishSub(d, lang);
   return (
     <article className={`card-${variant} ${d.available ? '' : 'off'}`} data-fly>
@@ -94,14 +94,14 @@ export function DishCard({ d, variant = 'tile', eager = false }: { d: Dish; vari
           <DishArt art={d.art} photo={d.photo} className={variant === 'feature' ? 'r45' : ''} label={d.name} eager={eager} sizes={variant === 'feature' ? '(max-width: 1020px) 100vw, 720px' : '(max-width: 640px) 116px, 360px'} />
         </Opener>
         <Badges d={d} />
-        <PlusButton d={d} />
+        {basePrice(d) > 0 && <PlusButton d={d} />}
       </div>
       <div className="txt">
         <h3 onClick={() => openDish(d.id)}>{d.name}</h3>
         {sub && <div className="sub">{sub}</div>}
         <p>{dishDesc(d, lang)}</p>
         <div className="meta">
-          <Price v={basePrice(d)} />
+          {basePrice(d) > 0 ? <Price v={basePrice(d)} /> : <span className="noprice">{t('dish.noPrice')}</span>}
           <span className="weight">{unitText(portionLabel(d), lang)}</span>
         </div>
       </div>
@@ -127,10 +127,10 @@ export function GrillCard({ d }: { d: Dish }) {
         {dishSub(d, lang) && <div className="sub">{dishSub(d, lang)}</div>}
         <p>{dishDesc(d, lang)}</p>
         <div className="meta">
-          <Price v={u} />
+          {u > 0 ? <Price v={u} /> : <span className="noprice">{t('dish.noPrice')}</span>}
           <span className="weight">{d.skewer ? t('grill.per') : unitText(portionLabel(d), lang)}</span>
         </div>
-        {d.available ? (
+        {d.available && u > 0 ? (
           <div className="grill-buy">
             {d.skewer && (
               <div className="stepper sm" aria-label={t('grill.count')}>
@@ -154,9 +154,9 @@ export function GrillCard({ d }: { d: Dish }) {
               <span className="num">+ {fmt(u * n)}</span>
             </button>
           </div>
-        ) : (
+        ) : !d.available ? (
           <span className="soldout">{t('dish.soldout')}</span>
-        )}
+        ) : null}
       </div>
     </article>
   );

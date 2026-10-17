@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Combo, Dish } from '@/lib/types';
 import { MOODS } from '@/lib/defaults';
-import { unitPrice } from '@/lib/pricing';
+import { basePrice, unitPrice } from '@/lib/pricing';
 import { fmt } from '@/lib/format';
 import { comboDesc, comboName, prepRange, sizeLabel, zoneName } from '@/lib/i18n';
 import { useSite } from './Providers';
@@ -11,12 +11,14 @@ import DishArt from './DishArt';
 import { DishCard, GrillCard } from './Dish';
 
 const listed = (menu: { cats: { id: string }[]; dishes: Dish[] }) => menu.dishes.filter((d) => menu.cats.some((c) => c.id === d.cat));
+/** dishes that can be ordered right now come first */
+const priced = (a: Dish, b: Dish) => Number(basePrice(b) > 0) - Number(basePrice(a) > 0);
 
 /* ---------- Bugun nima yeymiz? ---------- */
 export function Moods() {
   const { menu, t, lang } = useSite();
   const [mood, setMood] = useState('hearty');
-  const dishes = useMemo(() => listed(menu).filter((d) => d.available && d.moods?.includes(mood)), [menu, mood]);
+  const dishes = useMemo(() => listed(menu).filter((d) => d.available && d.moods?.includes(mood)).sort(priced), [menu, mood]);
   return (
     <section className="moods sec-light g" id="moods">
       <div className="in">
@@ -125,7 +127,7 @@ export function Featured() {
 /* ---------- Salads & fresh: bright chapter ---------- */
 export function FreshChapter() {
   const { menu, t } = useSite();
-  const fresh = listed(menu).filter((d) => (d.cat === 'salat' || d.cat === 'gazak') && d.available).slice(0, 6);
+  const fresh = listed(menu).filter((d) => (d.cat === 'salat' || d.cat === 'mayonez' || d.cat === 'gazak') && d.available).sort(priced).slice(0, 8);
   if (!fresh.length) return null;
   return (
     <section className="fresh-ch sec-light g" aria-labelledby="freshH">
@@ -169,7 +171,9 @@ export function comboLines(c: Combo, dishes: Dish[]) {
       const d = dishes.find((x) => x.id === i.id);
       if (!d || !d.available) return null;
       const si = d.sizes.length ? Math.min(i.si, d.sizes.length - 1) : 0;
-      return { d, si, qty: i.qty, sum: unitPrice(d, si, []) * i.qty };
+      const unit = unitPrice(d, si, []);
+      if (unit <= 0) return null; // price not set yet
+      return { d, si, qty: i.qty, sum: unit * i.qty };
     })
     .filter(Boolean) as { d: Dish; si: number; qty: number; sum: number }[];
   return lines.length === c.items.length ? lines : null; // hide a combo if any part is off the menu today

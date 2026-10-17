@@ -37,6 +37,7 @@ export type Settings = {
   name: string;
   tagline: string;
   phone: string;
+  phone2?: string;
   address: string;
   city: string;
   hours: string;

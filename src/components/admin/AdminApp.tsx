@@ -312,6 +312,7 @@ function MenuTab({ menu, edit, toast }: { menu: Menu; edit: (fn: (m: Menu) => vo
                     <b>{d.name}</b> <span className="cap">{d.ru} · {fmt(basePrice(d))} сум</span>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
                       {d.hidden && <span className="pill">скрыто</span>}
+                      {basePrice(d) <= 0 && <span className="pill new">нет цены</span>}
                       {!d.available && <span className="pill new">нет в наличии</span>}
                       {d.featured && <span className="pill warn">на главной</span>}
                       <span className={`pill ${d.photo ? 'ok' : ''}`}>{d.photo ? 'фото' : 'иллюстрация'}</span>
@@ -705,6 +706,7 @@ function SettingsTab({ s, edit, toast, menuCats }: { s: Settings; edit: (fn: (s:
         {f('tagline', 'Слоган')}
         {f('taglineUz', 'Слоган по-узбекски')}
         {f('phone', 'Телефон для заказов', '+998 ...')}
+        {f('phone2', 'Второй телефон', '+998 ...')}
         {f('city', 'Город')}
         {f('cityUz', 'Город по-узбекски', 'Yangiyoʻl, Toshkent viloyati')}
         {f('address', 'Адрес', 'Улица, дом, ориентир')}

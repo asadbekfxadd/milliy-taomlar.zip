@@ -36,6 +36,14 @@ export default function Footer({ s, lang }: { s: Settings; lang: Lang }) {
                     <br />
                   </>
                 )}
+                {s.phone2 && (
+                  <>
+                    <a className="num" href={`tel:${s.phone2.replace(/[^\d+]/g, '')}`} style={{ color: 'var(--cream)', textDecoration: 'none' }}>
+                      {s.phone2}
+                    </a>
+                    <br />
+                  </>
+                )}
                 {[s.pickup && translate(lang, 'cart.pickup'), s.delivery && translate(lang, 'cart.delivery')].filter(Boolean).join(' · ') || t('f.hall')}
               </p>
             </div>

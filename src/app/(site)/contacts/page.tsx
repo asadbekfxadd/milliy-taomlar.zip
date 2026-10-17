@@ -49,6 +49,7 @@ export default async function ContactsPage() {
             {s.phone ? (
               <>
                 <div className="big-phone num">{s.phone}</div>
+                {s.phone2 && <div className="big-phone num" style={{ fontSize: 'clamp(28px,3.4vw,48px)', marginTop: 8 }}>{s.phone2}</div>}
                 <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
                   <CopyButton text={s.phone} label={t('ct.copy')} doneLabel={t('ct.copied')} />
                   <a className="copy" href={`tel:${s.phone.replace(/[^\d+]/g, '')}`} style={{ textDecoration: 'none' }}>

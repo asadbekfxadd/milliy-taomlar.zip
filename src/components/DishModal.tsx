@@ -121,7 +121,7 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
             </div>
             <div>
               <b>{t('dish.allergens')}</b>
-              {d.allergens.length ? dishAllergens(d, lang).join(', ') : t('dish.allergensNone')}
+              {d.allergens.length ? dishAllergens(d, lang).join(', ') : d.ingr.length ? t('dish.allergensNone') : t('dish.ingrNone')}
               <br />
               <span className="cap">{t('dish.allergyNote')}</span>
             </div>
@@ -131,14 +131,12 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
             </div>
             <div>
               <b>{t('dish.unit')}</b>
-              <span className="num">
-                {fmt(u)} {t('sum')}
-              </span>
+              <span className="num">{u > 0 ? `${fmt(u)} ${t('sum')}` : t('dish.noPrice')}</span>
             </div>
           </div>
 
           <div className="addbar">
-            {d.available ? (
+            {d.available && u > 0 ? (
               <>
                 <div className="stepper">
                   <button onClick={() => setQty(Math.max(1, qty - 1))} aria-label={t('dish.less')}>
@@ -163,7 +161,7 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
                 </button>
               </>
             ) : (
-              <div className="alert err">{t('dish.notToday')}</div>
+              <div className={`alert ${d.available ? 'warn' : 'err'}`}>{d.available ? t('dish.noPriceNote') : t('dish.notToday')}</div>
             )}
           </div>
         </div>

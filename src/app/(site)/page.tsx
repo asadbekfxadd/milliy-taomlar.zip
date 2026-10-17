@@ -6,7 +6,7 @@ import { Combos, Featured, FreshChapter, GrillChapter, Moods, OrderBand } from '
 
 /* Hero spread: the dominant plate is the first featured dish with a photo; around it photos first,
    then drawn plates from other categories so the spread shows the breadth of the menu. */
-const AROUND = ['d5', 'd4', 'd7', 'd18', 'd10', 'd8', 'g5', 'b1'];
+const AROUND = ['b-lagman', 'o-kazan', 's-fillet', 'm-brizol-cheese', 'l-greek', 'm-tabaka-kg', 'm-jiz-kg', 'b-shurpa'];
 
 export default async function Home() {
   const menu = publicMenu(await getMenu());

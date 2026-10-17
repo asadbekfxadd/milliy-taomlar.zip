@@ -23,6 +23,7 @@ export function priceLine(menu: Menu, st: Settings, i: { id: string; si: number;
   const ex = [...new Set(i.ex)];
   if (ex.some((x) => x >= d.extras.length)) return 'Неверная добавка';
   const unit = unitPrice(d, i.si, ex);
+  if (unit <= 0) return `У «${d.name}» не указана цена — добавьте её в управлении`;
   return { id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: i.note || '', station: stationOf(menu, st, d.id), sent: false, ks: null };
 }
 

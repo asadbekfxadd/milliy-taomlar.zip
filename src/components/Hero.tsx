@@ -177,7 +177,7 @@ export default function Hero({ dishes }: { dishes: Dish[] }) {
             <div className="plate-tag">
               <i />
               <span className="cap">
-                {main.name} · {unitText(portionLabel(main), lang)} · {fmt(basePrice(main))} {t('sum')}
+                {[main.name, unitText(portionLabel(main), lang), basePrice(main) > 0 ? `${fmt(basePrice(main))} ${t('sum')}` : ''].filter(Boolean).join(' · ')}
               </span>
             </div>
           )}

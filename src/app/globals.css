@@ -798,3 +798,5 @@ body{background:
 .pl{animation-duration:.8s;animation-delay:calc(var(--i) * .06s)}
 .pl .ph img{opacity:1;transition:none}
 .pl .shim{display:none}
+
+.noprice{font-family:var(--ui);font-size:13px;font-weight:600;color:var(--dim);border:1px dashed var(--line-2);border-radius:999px;padding:5px 10px;white-space:nowrap}
