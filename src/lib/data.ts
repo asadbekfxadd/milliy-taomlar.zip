@@ -25,12 +25,34 @@ async function upgrade(m: Menu): Promise<Menu> {
   return { ...m, combos: m.combos ?? DEFAULT_COMBOS.filter((c) => c.items.every((i) => m.dishes.some((d) => d.id === i.id))), v: MENU_VERSION };
 }
 
+/* v3 -> v4: stock photos were added. Prices and edits the owner made are kept; a dish only gets the stock
+   photo when it still has no photo of its own. */
+async function addStockPhotos(m: Menu): Promise<Menu> {
+  const next: Menu = {
+    ...m,
+    dishes: m.dishes.map((d) => {
+      if (d.photo) return d;
+      const def = DEFAULT_DISHES.find((x) => x.id === d.id);
+      return def?.photo ? { ...d, photo: def.photo } : d;
+    }),
+    v: MENU_VERSION,
+  };
+  try {
+    await saveDoc('menu', next);
+    console.log('menu: added stock photos (v' + MENU_VERSION + ')');
+  } catch (e) {
+    console.error('menu photo upgrade failed', e);
+  }
+  return next;
+}
+
 export async function getMenu(): Promise<Menu> {
   noStore();
   try {
     let m = await loadDoc<Menu>('menu');
     if (m?.cats && m?.dishes) {
-      if ((m.v ?? 1) < MENU_VERSION) m = await upgrade(m);
+      if ((m.v ?? 1) < 3) m = await upgrade(m);
+      else if ((m.v ?? 1) < MENU_VERSION) m = await addStockPhotos(m);
       return { cats: m.cats, dishes: m.dishes.map((d) => D(d)), combos: m.combos ?? [], v: m.v };
     }
   } catch (e) {

@@ -9,7 +9,7 @@ export const photoSrc = (p?: string) => (!p ? '' : /^(https?:|data:|\/)/.test(p)
 export function photoSrcSet(p?: string) {
   if (!p) return undefined;
   if (/^[a-f0-9]{24}$/.test(p)) return [480, 960, 1600].map((w) => `/api/images/${p}?w=${w} ${w}w`).join(', ');
-  if (/^https:\/\/images\.unsplash\.com\//.test(p)) return [480, 960, 1600].map((w) => `${p.replace(/([?&])w=\d+/, `$1w=${w}`)} ${w}w`).join(', ');
+  if (/^https:\/\/images\.(unsplash|pexels)\.com\//.test(p)) return [480, 960, 1600].map((w) => `${p.replace(/([?&])w=\d+/, `$1w=${w}`)} ${w}w`).join(', ');
   return undefined;
 }
 

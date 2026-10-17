@@ -95,7 +95,11 @@ export default function Footer({ s, lang }: { s: Settings; lang: Lang }) {
                   </a>
                 </span>
               ))}{' '}
-              / Unsplash · {t('f.art')}
+              / Unsplash ·{' '}
+              <a href="https://www.pexels.com" target="_blank" rel="noopener">
+                Pexels
+              </a>{' '}
+              · {t('f.art')}
             </span>
           </div>
         </div>
