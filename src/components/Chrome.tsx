@@ -50,11 +50,11 @@ export function Header() {
   return (
     <header className={`mast g ${scrolled ? 'scrolled' : ''}`}>
       <div className="in">
-        <Link className="logo" href="/" aria-label={t('nav.toHome')}>
+        <Link className="logo" href="/" title={t('nav.toHome')}>
           <StarMark style={{ color: 'var(--saffron)', width: 32, height: 32 }} />
           <span>
             <b>{settings.name}</b>
-            <small>milliy taomlar · Yangiyul</small>
+            <small>milliy taomlar · Yangiyoʻl</small>
           </span>
         </Link>
         <nav className="nav" aria-label={t('nav.sections')}>

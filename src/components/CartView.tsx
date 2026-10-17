@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useSite } from './Providers';
+import { useClosed, useSite } from './Providers';
 import DishArt from './DishArt';
 import { Price } from './Dish';
 import { priceCart, promoDiscount } from '@/lib/pricing';
@@ -16,6 +16,7 @@ type Promo = { code: string; pct: number; fixed: number; min: number };
 export default function CartView() {
   const { menu, settings: st, cart, setQty, remove, clear, online, t, lang } = useSite();
   const router = useRouter();
+  const closed = useClosed();
   const { lines, subtotal } = useMemo(() => priceCart(menu, cart), [menu, cart]);
   const types = [st.pickup && 'pickup', st.delivery && 'delivery'].filter(Boolean) as ('pickup' | 'delivery')[];
   const [type, setType] = useState<'pickup' | 'delivery' | 'hall' | null>(types[0] ?? null);
@@ -55,6 +56,8 @@ export default function CartView() {
   const discount = hall ? 0 : promoDiscount(promo, subtotal);
   const total = subtotal + fee + service - discount;
   const short = del && z ? Math.max(0, z.min - subtotal) : 0;
+  const blocked = !hall && Boolean(closed);
+  const gone = lines.filter((l) => !l.d.available);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
 
   async function applyPromo() {
@@ -164,8 +167,11 @@ export default function CartView() {
             {lines.length ? (
               lines.map((l) => (
                 <div className="ci" key={l.key}>
-                  <DishArt art={l.d.art} photo={l.d.photo} className="round" label={l.d.ru} />
-                  <h4>{l.d.name}</h4>
+                  <DishArt art={l.d.art} photo={l.d.photo} className="round" label={l.d.name} sizes="96px" />
+                  <h4>
+                    {l.d.name}
+                    {!l.d.available && <span className="soldout"> · {t('dish.soldout')}</span>}
+                  </h4>
                   <div className="mods">
                     {[lang === 'ru' ? l.d.ru : '', l.d.sizes.length > 1 ? sizeLabel(l.d.sizes[l.si] ?? l.d.sizes[0], lang) : '', ...l.ex.map((i) => (l.d.extras[i] ? extraLabel(l.d.extras[i], lang) : ''))]
                       .filter(Boolean)
@@ -193,7 +199,7 @@ export default function CartView() {
               ))
             ) : (
               <div className="empty" style={{ textAlign: 'left', padding: '30px 0' }}>
-                <h3 style={{ fontSize: 40, fontStyle: 'italic', color: 'var(--cream)', marginBottom: 12 }}>{t('cart.empty')}</h3>
+                <h2 style={{ fontSize: 40, fontStyle: 'italic', color: 'var(--cream)', marginBottom: 12 }}>{t('cart.empty')}</h2>
                 {t('cart.emptyText')}
                 <div style={{ marginTop: 24, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <Link className="btn" href="/menu">
@@ -385,6 +391,16 @@ export default function CartView() {
                   </span>
                 </div>
               </div>
+              {blocked && (
+                <div className="alert warn full" role="status">
+                  <b>{closed!.title}.</b> {closed!.when}. {t('hours.cartNote')}
+                </div>
+              )}
+              {gone.length > 0 && (
+                <div className="alert err full" role="alert">
+                  {gone.map((l) => l.d.name).join(', ')} — {t('dish.soldout').toLowerCase()}. {t('cart.removeGone')}
+                </div>
+              )}
               {short > 0 && <div className="alert warn full">{t('cart.short', { m: fmt(z!.min), s: fmt(short) })}</div>}
               {msg && (
                 <div className="alert err full" role="alert">
@@ -392,7 +408,7 @@ export default function CartView() {
                   {st.phone ? t('cart.phoneTail', { p: st.phone }) : ''}
                 </div>
               )}
-              <button className="btn full" disabled={short > 0 || (!types.length && !hall) || busy}>
+              <button className="btn full" disabled={short > 0 || (!types.length && !hall) || busy || blocked || gone.length > 0}>
                 {busy
                   ? t('cart.sending')
                   : pay === 'payme' || pay === 'click'

@@ -1,4 +1,5 @@
 import type { Cat, Combo, Dish, Extra, Settings, Size, Zone } from './types';
+import { DAY_RU, DAY_UZ, orderWindow } from './hours';
 
 /* Guest site languages. Uzbek (Latin) is the default, Russian is one tap away.
    Staff screens, tickets and the admin stay in Russian. */
@@ -103,12 +104,13 @@ const ru = {
   'dish.moreQty': 'Больше',
   'dish.close': 'Закрыть',
   'dish.notToday': 'Сегодня этого блюда нет в наличии.',
-  'dish.photoSoon': 'Иллюстрация. Фото блюда скоро',
+  'dish.photoSoon': 'Иллюстрация блюда',
   // cart
   'cart.kicker': 'Заказ',
   'cart.h': 'Корзина',
   'cart.each': '{s} сум за шт.',
   'cart.remove': 'Убрать',
+  'cart.removeGone': 'Уберите из корзины, чтобы оформить заказ.',
   'cart.empty': 'Пока пусто',
   'cart.emptyText': 'Начните с шашлыка из баранины: его жарят на углях прямо перед подачей.',
   'cart.open': 'Открыть меню',
@@ -266,6 +268,13 @@ const ru = {
   // 404
   'nf.h1': 'Такой страницы',
   'nf.h2': 'нет',
+  'hours.closed': 'Сейчас мы закрыты',
+  'hours.today': 'Откроемся сегодня в {at}',
+  'hours.tomorrow': 'Откроемся завтра в {at}',
+  'hours.on': 'Откроемся в {day} в {at}',
+  'hours.paused': 'Онлайн-заказы временно не принимаем. Позвоните нам',
+  'hours.cartNote': 'Заказ можно будет оформить, когда мы откроемся. Корзина сохранится.',
+  'hours.badTime': 'В это время мы закрыты',
   // moods / tags / units handled below
 };
 
@@ -356,11 +365,12 @@ const uz: Record<Key, string> = {
   'dish.moreQty': 'Koʻproq',
   'dish.close': 'Yopish',
   'dish.notToday': 'Bugun bu taom yoʻq.',
-  'dish.photoSoon': 'Rasm. Taom surati tez orada',
+  'dish.photoSoon': 'Taom illyustratsiyasi',
   'cart.kicker': 'Buyurtma',
   'cart.h': 'Savat',
   'cart.each': 'Donasi {s} soʻm',
   'cart.remove': 'Olib tashlash',
+  'cart.removeGone': 'Buyurtma berish uchun savatdan olib tashlang.',
   'cart.empty': 'Hozircha boʻsh',
   'cart.emptyText': 'Qoʻy kababidan boshlang: u tortishdan oldin koʻmirda pishiriladi.',
   'cart.open': 'Menyuni ochish',
@@ -511,6 +521,13 @@ const uz: Record<Key, string> = {
   'tb.notMine': 'Stol meniki emas',
   'nf.h1': 'Bunday sahifa',
   'nf.h2': 'yoʻq',
+  'hours.closed': 'Hozir yopiqmiz',
+  'hours.today': 'Bugun {at} da ochamiz',
+  'hours.tomorrow': 'Ertaga {at} da ochamiz',
+  'hours.on': '{day} kuni {at} da ochamiz',
+  'hours.paused': 'Onlayn buyurtmalar vaqtincha qabul qilinmayapti. Bizga qoʻngʻiroq qiling',
+  'hours.cartNote': 'Ochilganimizdan soʻng buyurtma berishingiz mumkin. Savat saqlanib qoladi.',
+  'hours.badTime': 'Bu vaqtda biz yopiqmiz',
 };
 
 export const DICT: Record<Lang, Record<Key, string>> = { ru, uz };
@@ -566,3 +583,13 @@ export const prepRange = (st: Settings) => {
   const a = st.prepMinutes || 25;
   return `${a}–${a + 15}`;
 };
+
+/** "Hozir yopiqmiz · Ertaga 09:00 da ochamiz" — null while open. */
+export function closedText(st: Settings, lang: Lang, d = new Date()) {
+  const w = orderWindow(st, d);
+  if (w.open) return null;
+  if (w.reason === 'paused') return { title: translate(lang, 'hours.closed'), when: translate(lang, 'hours.paused') };
+  const when =
+    w.inDays === 0 ? translate(lang, 'hours.today', { at: w.at }) : w.inDays === 1 ? translate(lang, 'hours.tomorrow', { at: w.at }) : translate(lang, 'hours.on', { at: w.at, day: (lang === 'uz' ? DAY_UZ : DAY_RU)[w.day] });
+  return { title: translate(lang, 'hours.closed'), when };
+}

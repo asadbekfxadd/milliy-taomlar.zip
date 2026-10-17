@@ -733,7 +733,30 @@ function SettingsTab({ s, edit, toast, menuCats }: { s: Settings; edit: (fn: (s:
             </button>
           </div>
         </div>
-        {f('prepTime', 'Время приготовления (текст на сайте)', '30–45 минут')}
+        <div className="fld">
+          <span className="lbl">Приём онлайн-заказов (время Ташкента)</span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input type="time" value={s.openFrom || ''} onChange={(e) => edit((x) => (x.openFrom = e.target.value))} style={{ width: 120 }} aria-label="С" />
+            —
+            <input type="time" value={s.openTo || ''} onChange={(e) => edit((x) => (x.openTo = e.target.value))} style={{ width: 120 }} aria-label="До" />
+          </div>
+          <div className="tgl" style={{ marginTop: 8 }}>
+            {['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'].map((d, i) => {
+              const off = (s.closedDays || []).includes(i);
+              return (
+                <button key={i} type="button" className={`chk ${off ? '' : 'on'}`} title={off ? 'Выходной' : 'Рабочий день'} onClick={() => edit((x) => (x.closedDays = off ? (x.closedDays || []).filter((y) => y !== i) : [...(x.closedDays || []), i]))}>
+                  {d}
+                </button>
+              );
+            })}
+          </div>
+          <span className="cap">Подсвеченные — рабочие дни. Вне этого времени сайт покажет «Сейчас закрыты» и не примет заказ.</span>
+          <div className="tgl" style={{ marginTop: 8 }}>
+            <button type="button" className={`chk ${s.ordersPaused ? 'on' : ''}`} onClick={() => edit((x) => (x.ordersPaused = !x.ordersPaused))}>
+              {s.ordersPaused ? 'Онлайн-заказы на паузе' : 'Поставить онлайн-заказы на паузу'}
+            </button>
+          </div>
+        </div>
         <div className="fld">
           <label>Готовим, мин (для времени ожидания гостю)</label>
           <input inputMode="numeric" value={String(s.prepMinutes ?? 25)} onChange={(e) => edit((x) => (x.prepMinutes = Math.max(1, Math.min(240, +e.target.value.replace(/\D/g, '') || 0))))} />

@@ -56,6 +56,12 @@ export type Settings = {
   cityUz?: string;
   addressUz?: string;
   hoursUz?: string;
+  /** structured opening hours (Tashkent time) — orders outside are not accepted */
+  openFrom?: string;
+  openTo?: string;
+  closedDays?: number[];
+  /** temporary stop for online orders (busy kitchen, holiday) */
+  ordersPaused?: boolean;
   promos?: Promo[];
   /* POS */
   tables: number;

@@ -5,6 +5,14 @@ export const fmt = (n: number | string) =>
 
 export const photoSrc = (p?: string) => (!p ? '' : /^(https?:|data:|\/)/.test(p) ? p : `/api/images/${p}`);
 
+/** Responsive sources for uploaded photos and Unsplash links (others are used as they are). */
+export function photoSrcSet(p?: string) {
+  if (!p) return undefined;
+  if (/^[a-f0-9]{24}$/.test(p)) return [480, 960, 1600].map((w) => `/api/images/${p}?w=${w} ${w}w`).join(', ');
+  if (/^https:\/\/images\.unsplash\.com\//.test(p)) return [480, 960, 1600].map((w) => `${p.replace(/([?&])w=\d+/, `$1w=${w}`)} ${w}w`).join(', ');
+  return undefined;
+}
+
 /** "+998 90 123 45 67" style normalisation; returns null when the number is not Uzbek-shaped. */
 export function normalizePhone(raw: string): string | null {
   const d = (raw || '').replace(/\D/g, '');

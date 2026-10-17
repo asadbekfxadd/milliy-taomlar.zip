@@ -20,13 +20,13 @@ export default function Footer({ s, lang }: { s: Settings; lang: Lang }) {
           <div className="fcols">
             {(addr || x.hours) && (
               <div>
-                <h5>{t('f.where')}</h5>
+                <h2 className="fh">{t('f.where')}</h2>
                 {addr && <p>{addr}</p>}
                 {x.hours && <p style={{ marginTop: 6 }}>{x.hours}</p>}
               </div>
             )}
             <div>
-              <h5>{t('f.orders')}</h5>
+              <h2 className="fh">{t('f.orders')}</h2>
               <p>
                 {s.phone && (
                   <>
@@ -41,7 +41,7 @@ export default function Footer({ s, lang }: { s: Settings; lang: Lang }) {
             </div>
             {(s.instagram || s.telegram) && (
               <div>
-                <h5>{t('f.social')}</h5>
+                <h2 className="fh">{t('f.social')}</h2>
                 <p>
                   {s.instagram && (
                     <>
@@ -60,7 +60,7 @@ export default function Footer({ s, lang }: { s: Settings; lang: Lang }) {
               </div>
             )}
             <div>
-              <h5>{t('f.sections')}</h5>
+              <h2 className="fh">{t('f.sections')}</h2>
               <p>
                 <Link href="/menu">{t('nav.menu')}</Link>
                 <br />

@@ -27,24 +27,23 @@ export function Moods() {
           </div>
           <p>{t('moods.sub')}</p>
         </div>
-        <div className="mood-tiles" role="tablist" aria-label={t('menu.mood')}>
+        <div className="mood-tiles" role="group" aria-label={t('menu.mood')}>
           {MOODS.map((m) => (
             <button
               key={m.id}
-              role="tab"
-              aria-selected={mood === m.id}
+              aria-pressed={mood === m.id}
               className={`mood m-${m.id} ${mood === m.id ? 'on' : ''}`}
               onClick={() => setMood(m.id)}
             >
               <span className="mood-art" aria-hidden="true">
-                <DishArt art={m.art} className="round" />
+                <DishArt art={m.art} className="round" sizes="160px" />
               </span>
               <b>{lang === 'uz' ? m.uz : m.ru}</b>
               <span>{lang === 'uz' ? m.subUz : m.subRu}</span>
             </button>
           ))}
         </div>
-        <div className="rail" role="tabpanel" key={mood}>
+        <div className="rail" key={mood} aria-live="polite">
           {dishes.length ? dishes.slice(0, 10).map((d) => <DishCard key={d.id} d={d} />) : <p className="muted">{t('moods.empty')}</p>}
         </div>
         <div className="more">
@@ -198,7 +197,7 @@ export function Combos() {
                 <div className="combo-pics ph-stack" aria-hidden="true">
                   {lines!.slice(0, 4).map((l, i) => (
                     <span key={i} style={{ ['--i' as string]: i }}>
-                      <DishArt art={l.d.art} photo={l.d.photo} className="round" />
+                      <DishArt art={l.d.art} photo={l.d.photo} className="round" sizes="84px" />
                     </span>
                   ))}
                 </div>

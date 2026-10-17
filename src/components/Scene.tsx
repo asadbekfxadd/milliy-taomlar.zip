@@ -8,7 +8,7 @@ export default function Scene({ i, s, lang, showHint }: { i: number; s: Settings
   const own = s.story?.[i];
   return (
     <section className={`scene ${i % 2 ? 'rev' : ''} ${s.storyPhotos?.[i] ? '' : 'textonly'}`}>
-      {s.storyPhotos?.[i] && <DishArt art={sc.art} photo={s.storyPhotos[i]} label={sc.t} />}
+      {s.storyPhotos?.[i] && <DishArt art={sc.art} photo={s.storyPhotos[i]} label={lang === 'uz' ? sc.tUz : sc.t} sizes="(max-width: 1020px) 100vw, 50vw" />}
       <div className="txt rv">
         <div className="no">
           {translate(lang, 'nav.story')} · {String(i + 1).padStart(2, '0')} / 06

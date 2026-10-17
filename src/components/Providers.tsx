@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from 'next/navigation';
 import type { CartItem, Menu, Settings } from '@/lib/types';
 import { cartKey } from '@/lib/pricing';
-import { LANG_COOKIE, makeT, type Lang, type T } from '@/lib/i18n';
+import { closedText, LANG_COOKIE, makeT, type Lang, type T } from '@/lib/i18n';
 import DishModal from './DishModal';
 
 type Ctx = {
@@ -154,4 +154,17 @@ export default function Providers({ menu, settings, lang, online = { payme: fals
       )}
     </C.Provider>
   );
+}
+
+/** Closed/paused notice for the guest, recomputed every minute (client only, so no hydration mismatch). */
+export function useClosed() {
+  const { settings, lang } = useSite();
+  const [c, setC] = useState<ReturnType<typeof closedText>>(null);
+  useEffect(() => {
+    const f = () => setC(closedText(settings, lang));
+    f();
+    const id = setInterval(f, 60_000);
+    return () => clearInterval(id);
+  }, [settings, lang]);
+  return c;
 }

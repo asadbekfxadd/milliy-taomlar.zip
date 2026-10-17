@@ -5,7 +5,7 @@ import type { Dish } from '@/lib/types';
 import { basePrice, portionLabel } from '@/lib/pricing';
 import { fmt } from '@/lib/format';
 import { prepRange, unitText } from '@/lib/i18n';
-import { useSite } from './Providers';
+import { useClosed, useSite } from './Providers';
 import DishArt from './DishArt';
 import Girih from './Girih';
 
@@ -53,6 +53,7 @@ function Pomegranate({ className }: { className: string }) {
 
 export default function Hero({ dishes }: { dishes: Dish[] }) {
   const { settings: s, t, lang, count } = useSite();
+  const closed = useClosed();
   const stage = useRef<HTMLDivElement>(null);
   const main = dishes[0];
 
@@ -122,6 +123,11 @@ export default function Hero({ dishes }: { dishes: Dish[] }) {
               {t('hero.cta2')}
             </Link>
           </div>
+          {closed && (
+            <p className="closed-note" role="status">
+              <b>{closed.title}</b> · {closed.when}
+            </p>
+          )}
           <ul className="strip" aria-label="info">
             <li>
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -157,7 +163,7 @@ export default function Hero({ dishes }: { dishes: Dish[] }) {
           <div className="glow" aria-hidden="true" />
           {dishes.slice(0, SLOTS.length).map((d, i) => (
             <div key={d.id} className={`pl pl-${SLOTS[i]}`} style={{ ['--i' as string]: i }}>
-              <DishArt art={d.art} photo={d.photo} className="round" label={d.ru} eager={i < 3} />
+              <DishArt art={d.art} photo={d.photo} className="round" label={d.name} eager={i < 3} sizes={i === 0 ? '(max-width: 1020px) 62vw, 480px' : '(max-width: 1020px) 34vw, 240px'} />
             </div>
           ))}
           <Leaf className="dl1" />

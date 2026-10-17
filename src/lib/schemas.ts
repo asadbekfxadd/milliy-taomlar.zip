@@ -95,6 +95,10 @@ export const settingsSchema = z.object({
   cityUz: str(80).optional().default(''),
   addressUz: str(200).optional().default(''),
   hoursUz: str(160).optional().default(''),
+  openFrom: z.string().regex(/^([01]?\d|2[0-3]):[0-5]\d$/).or(z.literal('')).optional().default(''),
+  openTo: z.string().regex(/^([01]?\d|2[0-4]):[0-5]\d$/).or(z.literal('')).optional().default(''),
+  closedDays: z.array(z.number().int().min(0).max(6)).max(7).optional().default([]),
+  ordersPaused: z.boolean().optional().default(false),
   promos: z
     .array(z.object({ code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,24}$/), pct: z.coerce.number().min(0).max(90).default(0), fixed: money.default(0), min: money.default(0), active: z.boolean().default(true) }))
     .max(50)

@@ -118,7 +118,7 @@ export default function MenuView() {
                   </div>
                   <span className="cat-n num">{String(ds.length).padStart(2, '0')}</span>
                   <span className="cat-art" aria-hidden="true">
-                    <DishArt art={art} className="round" />
+                    <DishArt art={art} className="round" sizes="220px" />
                   </span>
                 </header>
                 {lead && (

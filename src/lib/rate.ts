@@ -19,3 +19,12 @@ export function limited(key: string, max: number, windowMs: number) {
 export function clientIp(req: Request) {
   return (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || 'unknown';
 }
+
+/** Like `limited`, but only checks; call `record` after the action really happened. */
+export function over(key: string, max: number, windowMs: number) {
+  const now = Date.now();
+  return (hits.get(key) ?? []).filter((t) => now - t < windowMs).length >= max;
+}
+export function record(key: string) {
+  hits.set(key, [...(hits.get(key) ?? []), Date.now()]);
+}

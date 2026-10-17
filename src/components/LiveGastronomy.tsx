@@ -18,7 +18,14 @@ export default function LiveGastronomy() {
     setReduce(rm);
     let raf = 0, alive = true, lastP = -1, lastStep = -1, visible = false;
     const steam: { x: number; y: number; r: number; l: number; m: number }[] = [];
-    const io = new IntersectionObserver((es) => (visible = es[0].isIntersecting), { rootMargin: '100px 0px' });
+    let kick: () => void = () => {};
+    const io = new IntersectionObserver(
+      (es) => {
+        visible = es[0].isIntersecting;
+        if (visible) kick();
+      },
+      { rootMargin: '100px 0px' },
+    );
     if (sec.current) io.observe(sec.current);
 
     loadArt().then((m) => {
@@ -74,7 +81,11 @@ export default function LiveGastronomy() {
             lastP = p;
           }
         }
-        raf = requestAnimationFrame(loop);
+        // sleep while the scene is off screen; the observer wakes it up
+        raf = visible ? requestAnimationFrame(loop) : 0;
+      };
+      kick = () => {
+        if (!raf) raf = requestAnimationFrame(loop);
       };
       loop();
       return () => ro.disconnect();

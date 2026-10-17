@@ -466,8 +466,8 @@ function drawSweets(c,W,H){
 function drawIcecream(c,W,H){
   const R=rng(408),cx=W/2,cy=H/2;board(c,W,H,R,['#3A2A33','#4A3640','#2A1E25']);const r=W*.34;
   smallBowl(c,cx,cy,r,R,'#F4F1EA','#8A2A4A');
-  [[-.28,-.12,'#FFF4DE'],[.26,-.18,'#FCEBC8'],[0,.24,'#FFF8EA']].forEach(([dx,dy,col])=>{const x=cx+dx*r,y=cy+dy*r,s=r*.36;
-    shadowed(c,s*.3,s*.12,()=>{c.fillStyle=radial(c,x,y,s,[[0,col],[1,'#E2D2B4']]);blob(c,x,y,s,R,12,.95);c.fill()},'rgba(0,0,0,.3)');gloss(c,x,y,s,.35)});
+  [[-.28,-.12,'#FFF4DE','#E2D2B4'],[.26,-.18,'#F7B9C6','#D9809A'],[0,.24,'#9A6440','#5E3820']].forEach(([dx,dy,col,edge])=>{const x=cx+dx*r,y=cy+dy*r,s=r*.36;
+    shadowed(c,s*.3,s*.12,()=>{c.fillStyle=radial(c,x,y,s,[[0,col],[1,edge]]);blob(c,x,y,s,R,12,.95);c.fill()},'rgba(0,0,0,.3)');gloss(c,x,y,s,.35)});
   c.strokeStyle='#A0182E';c.lineWidth=r*.05;c.lineCap='round';for(let i=0;i<4;i++){c.beginPath();const y=cy-r*.4+i*r*.25;c.moveTo(cx-r*.5,y);c.bezierCurveTo(cx-r*.2,y-r*.2,cx+r*.1,y+r*.2,cx+r*.45,y-r*.05);c.stroke()}
   for(let i=0;i<8;i++){c.fillStyle='#7A0E22';c.beginPath();c.arc(cx+(R()-.5)*r*.9,cy+(R()-.5)*r*.9,r*.04,0,7);c.fill()}
   herbs(c,cx+r*.2,cy-r*.3,r*.1,W*.46,R,3,['#4E8F2C']);

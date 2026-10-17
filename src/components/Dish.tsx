@@ -91,7 +91,7 @@ export function DishCard({ d, variant = 'tile', eager = false }: { d: Dish; vari
     <article className={`card-${variant} ${d.available ? '' : 'off'}`} data-fly>
       <div className="fig">
         <Opener d={d}>
-          <DishArt art={d.art} photo={d.photo} className={variant === 'feature' ? 'r45' : ''} label={d.ru} eager={eager} />
+          <DishArt art={d.art} photo={d.photo} className={variant === 'feature' ? 'r45' : ''} label={d.name} eager={eager} sizes={variant === 'feature' ? '(max-width: 1020px) 100vw, 720px' : '(max-width: 640px) 116px, 360px'} />
         </Opener>
         <Badges d={d} />
         <PlusButton d={d} />
@@ -118,7 +118,7 @@ export function GrillCard({ d }: { d: Dish }) {
     <article className={`card-grill ${d.available ? '' : 'off'}`} data-fly>
       <div className="fig">
         <Opener d={d}>
-          <DishArt art={d.art} photo={d.photo} label={d.ru} />
+          <DishArt art={d.art} photo={d.photo} label={d.name} sizes="(max-width: 640px) 116px, 360px" />
         </Opener>
         <Badges d={d} />
       </div>

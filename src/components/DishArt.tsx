@@ -1,12 +1,14 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { photoSrc } from '@/lib/format';
+import { photoSrc, photoSrcSet } from '@/lib/format';
 
-/* Shows the uploaded photo when there is one, otherwise a lazily drawn canvas illustration. */
+/* A dish picture: the uploaded photo when there is one, otherwise the pre-rendered illustration
+   (public/art, made by scripts/render-art.mjs). Both are plain lazy images, so phones do no drawing. */
 const cache = new Map<string, HTMLCanvasElement>();
 let artMod: Promise<any> | null = null;
 export const loadArt = () => (artMod ??= import('@/lib/art.js'));
 
+/** Live canvas drawing — only the animated grill scene still needs it. */
 export async function artBitmap(key: string, size: number) {
   const k = key + '@' + size;
   const hit = cache.get(k);
@@ -14,83 +16,66 @@ export async function artBitmap(key: string, size: number) {
   const m = await loadArt();
   const cv = document.createElement('canvas');
   cv.width = cv.height = size;
-  const fn = m.ART[key] || m.ART.plov;
-  if (key === 'kazanlive') m.LIVE.layers = null;
-  fn(cv.getContext('2d'), size, size);
-  if (key === 'kazanlive') m.LIVE.layers = null;
+  (m.ART[key] || m.ART.plov)(cv.getContext('2d'), size, size);
   cache.set(k, cv);
   return cv;
 }
 
-export default function DishArt({ art, photo, className = '', label = '', eager = false }: { art: string; photo?: string; className?: string; label?: string; eager?: boolean }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const cvRef = useRef<HTMLCanvasElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const [state, setState] = useState<'idle' | 'loaded' | 'photo-failed'>('idle');
-  const usePhoto = Boolean(photo) && state !== 'photo-failed';
+const artSrc = (art: string, size: 400 | 800) => `/art/${size}/${encodeURIComponent(art || 'plov')}.webp`;
 
-  // a photo can finish loading before hydration, when onLoad has no listener yet
+export default function DishArt({
+  art,
+  photo,
+  className = '',
+  label = '',
+  eager = false,
+  sizes = '(max-width: 640px) 45vw, 360px',
+}: {
+  art: string;
+  photo?: string;
+  className?: string;
+  label?: string;
+  eager?: boolean;
+  sizes?: string;
+}) {
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const usePhoto = Boolean(photo) && !failed;
+
+  // reset when the picture changes
+  useEffect(() => {
+    setFailed(false);
+    setLoaded(false);
+  }, [photo, art]);
+
+  // the image may have finished before hydration attached onLoad/onError
   useEffect(() => {
     const im = imgRef.current;
-    if (usePhoto && im?.complete) setState(im.naturalWidth > 0 ? 'loaded' : 'photo-failed');
-  }, [usePhoto, photo]);
-
-  useEffect(() => {
-    if (usePhoto) return;
-    const el = ref.current;
-    if (!el) return;
-    let cancelled = false;
-    const draw = async () => {
-      const r = el.getBoundingClientRect();
-      const dpr = Math.min(innerWidth < 1020 ? 1.5 : 2, devicePixelRatio || 1);
-      const size = Math.max(64, Math.min(1600, Math.round((Math.max(r.width, r.height) * dpr) / 64) * 64));
-      const bmp = await artBitmap(art || 'plov', size);
-      const cv = cvRef.current;
-      if (cancelled || !cv) return;
-      cv.width = cv.height = size;
-      cv.getContext('2d')!.drawImage(bmp, 0, 0);
-      setState('loaded');
-    };
-    if (eager || !('IntersectionObserver' in window)) {
-      draw();
-      return () => {
-        cancelled = true;
-      };
+    if (im?.complete) {
+      if (im.naturalWidth > 0) setLoaded(true);
+      else if (usePhoto) setFailed(true);
     }
-    const io = new IntersectionObserver(
-      (es) => {
-        if (es.some((e) => e.isIntersecting)) {
-          io.disconnect();
-          draw();
-        }
-      },
-      { rootMargin: '300px 0px' },
-    );
-    io.observe(el);
-    return () => {
-      cancelled = true;
-      io.disconnect();
-    };
-  }, [art, usePhoto, eager]);
+  }, [usePhoto]);
 
+  const src = usePhoto ? photoSrc(photo) : artSrc(art, 800);
   return (
-    <div ref={ref} className={`ph ${className}`} role="img" aria-label={label}>
-      {state !== 'loaded' && <div className="shim" />}
-      {usePhoto ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          ref={imgRef}
-          src={photoSrc(photo)}
-          alt=""
-          loading={eager ? 'eager' : 'lazy'}
-          decoding="async"
-          className={state === 'loaded' ? 'ld' : ''}
-          onLoad={() => setState('loaded')}
-          onError={() => setState('photo-failed')}
-        />
-      ) : (
-        <canvas ref={cvRef} className={state === 'loaded' ? 'ld' : ''} />
-      )}
+    <div className={`ph ${className} ${usePhoto ? 'is-photo' : 'is-art'}`} role={label ? 'img' : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : true}>
+      {!loaded && <div className="shim" />}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={src}
+        ref={imgRef}
+        src={src}
+        srcSet={usePhoto ? photoSrcSet(photo) : `${artSrc(art, 400)} 400w, ${artSrc(art, 800)} 800w`}
+        sizes={sizes}
+        alt=""
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+        className={loaded ? 'ld' : ''}
+        onLoad={() => setLoaded(true)}
+        onError={() => (usePhoto ? setFailed(true) : setLoaded(true))}
+      />
     </div>
   );
 }

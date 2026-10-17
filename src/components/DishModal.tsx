@@ -56,7 +56,7 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
         </button>
         <div className={`sheet-fig ${d.photo ? '' : 'art'}`}>
           <Badges d={d} />
-          <DishArt art={d.art} photo={d.photo} label={d.ru} eager className={d.photo ? '' : 'round'} />
+          <DishArt art={d.art} photo={d.photo} label={d.name} eager className={d.photo ? '' : 'round'} sizes="(max-width: 1020px) 100vw, 560px" />
           {!d.photo && <span className="art-note">{t('dish.photoSoon')}</span>}
         </div>
         <div className="body">

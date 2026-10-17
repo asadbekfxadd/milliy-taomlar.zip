@@ -5,9 +5,10 @@ import { getMenu, getSettings } from '@/lib/data';
 import { orderInput } from '@/lib/schemas';
 import { modsOf, promoDiscount, unitPrice } from '@/lib/pricing';
 import { findPromo } from '@/lib/promo';
+import { orderWindow, timeInHours } from '@/lib/hours';
 import { normalizePhone } from '@/lib/format';
 import { notifyNewOrder } from '@/lib/telegram';
-import { clientIp, limited } from '@/lib/rate';
+import { clientIp, limited, over, record } from '@/lib/rate';
 import { saveItems, sendToKitchen, stationOf } from '@/lib/pos';
 import type { OrderItem } from '@/lib/types';
 import { checkoutUrl, isOnline, providers } from '@/lib/payments';
@@ -34,11 +35,13 @@ const UZ: Record<string, string> = {
   'Выберите зону доставки': 'Yetkazish hududini tanlang',
   'Укажите улицу и дом': 'Koʻcha va uyni kiriting',
   'Такого промокода нет или он больше не действует': 'Bunday promokod yoʻq yoki muddati tugagan',
+  'Онлайн-заказы временно не принимаем. Позвоните нам': 'Onlayn buyurtmalar vaqtincha qabul qilinmayapti. Bizga qoʻngʻiroq qiling',
+  'В это время мы закрыты': 'Bu vaqtda biz yopiqmiz',
 };
 
 export async function POST(req: Request) {
-  if (limited('order:' + clientIp(req), 6, 10 * 60_000)) return bad('Слишком много заказов подряд. Попробуйте через несколько минут или позвоните нам.', undefined, 429);
 
+  if (limited('orderreq:' + clientIp(req), 60, 10 * 60_000)) return bad('Слишком много запросов', undefined, 429);
   let body: unknown;
   try {
     body = await req.json();
@@ -47,10 +50,15 @@ export async function POST(req: Request) {
   }
   const parsed = orderInput.safeParse(body);
   const lang = (body as { lang?: string })?.lang === 'uz' ? 'uz' : 'ru';
-  const err = (ru: string, field?: string, status = 400) => bad(lang === 'uz' ? UZ[ru] ?? ru : ru, field, status);
+  const err = (ru: string, field?: string, status = 400) =>
+    bad(lang === 'uz' ? UZ[ru] ?? ru.replace(/^Сейчас мы закрыты\. Откроемся в (.+)$/, 'Hozir yopiqmiz. $1 da ochamiz') : ru, field, status);
   if (!parsed.success) return err('Проверьте поля формы');
   const o = parsed.data;
   if (o.website) return NextResponse.json({ ok: true }); // bot
+  // guests at tables often share the restaurant Wi-Fi (one IP), so tables get their own counter
+  const rlKey = o.type === 'hall' ? `order:${clientIp(req)}:t${o.table}` : 'order:' + clientIp(req);
+  // only placed orders count; a guest fixing a typo is not a spammer
+  if (over(rlKey, o.type === 'hall' ? 12 : 6, 10 * 60_000)) return err('Слишком много заказов подряд. Попробуйте через несколько минут или позвоните нам.', undefined, 429);
 
   const [menu, st] = await Promise.all([getMenu(), getSettings()]);
 
@@ -59,6 +67,12 @@ export async function POST(req: Request) {
   const online = isOnline(o.pay);
   if (online ? !providers()[o.pay as 'payme' | 'click'] : !st.pay[o.pay as 'cash' | 'card']) return err('Этот способ оплаты недоступен');
   const hall = o.type === 'hall';
+  if (!hall) {
+    const w = orderWindow(st);
+    if (!w.open)
+      return err(w.reason === 'paused' ? 'Онлайн-заказы временно не принимаем. Позвоните нам' : `Сейчас мы закрыты. Откроемся в ${w.at}`, undefined, 409);
+    if (o.when !== 'asap' && !timeInHours(st, o.when)) return err('В это время мы закрыты', 'time');
+  }
   if (hall) {
     if (!o.table || o.table > (st.tables || 0)) return err('Неизвестный стол. Отсканируйте метку на столе ещё раз.');
     if (online) return err('За столом оплата официанту: наличными или картой');
@@ -100,6 +114,7 @@ export async function POST(req: Request) {
       const mid = await notifyNewOrder(check);
       if (mid && !check.tgMessageId) await q('UPDATE orders SET tg_message_id = $2 WHERE id = $1', [check.id, mid]);
     } catch {}
+    record(rlKey);
     return NextResponse.json({ id: check.id, token: check.token, no: check.no });
   }
 
@@ -131,6 +146,7 @@ export async function POST(req: Request) {
   let order = mapOrder(r.rows[0]);
 
   // Paid online: nothing reaches the kitchen until the provider confirms the payment.
+  record(rlKey);
   if (online) return NextResponse.json({ id: order.id, token: order.token, no: order.no, payUrl: checkoutUrl(o.pay, order) });
 
   // Like Jowi/R-Keeper: an online order goes straight to the kitchen and a slip prints at the cashier.

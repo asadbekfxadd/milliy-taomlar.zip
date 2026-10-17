@@ -23,13 +23,16 @@ export async function POST(req: Request) {
   if (msg?.chat?.type === 'private' && typeof msg.text === 'string') {
     const m = msg.text.match(/^\/start\s+o([a-f0-9]{24})([a-f0-9]{16})$/);
     if (!m) {
-      await tg('sendMessage', { chat_id: msg.chat.id, text: `Здравствуйте! Это бот ${st.name}. Чтобы получать статус заказа, нажмите «Уведомления в Telegram» на странице заказа на сайте.` });
+      await tg('sendMessage', {
+        chat_id: msg.chat.id,
+        text: `Assalomu alaykum! Bu ${st.name} boti. Buyurtma holatini olish uchun saytdagi buyurtma sahifasida «Telegramda xabar olish» tugmasini bosing.\n\nЗдравствуйте! Это бот ${st.name}. Чтобы получать статус заказа, нажмите «Уведомления в Telegram» на странице заказа на сайте.`,
+      });
       return Response.json({ ok: true });
     }
     const o = await getOrder(m[1]);
     const ok = o && o.token.length >= 16 && timingSafeEqual(Buffer.from(o.token.slice(0, 16)), Buffer.from(m[2]));
     if (!o || !ok) {
-      await tg('sendMessage', { chat_id: msg.chat.id, text: 'Заказ не найден. Откройте ссылку со страницы заказа ещё раз.' });
+      await tg('sendMessage', { chat_id: msg.chat.id, text: 'Buyurtma topilmadi. Havolani buyurtma sahifasidan qayta oching.\nЗаказ не найден. Откройте ссылку со страницы заказа ещё раз.' });
       return Response.json({ ok: true });
     }
     await q('UPDATE orders SET customer_chat = $2 WHERE id = $1', [o.id, msg.chat.id]);
@@ -37,7 +40,10 @@ export async function POST(req: Request) {
     const waitPay = o.payStatus === 'pending' ? ' Ожидаем оплату.' : '';
     await tg('sendMessage', {
       chat_id: msg.chat.id,
-      text: `Готово! Пришлём сюда все изменения по заказу № ${o.no}.${waitPay}${now ? '\n\n' + now : o.status === 'new' ? '\n\nЗаказ получен и ждёт подтверждения.' : ''}`,
+      text:
+        o.lang === 'uz'
+          ? `Tayyor! № ${o.no} buyurtma boʻyicha barcha oʻzgarishlarni shu yerga yuboramiz.${o.payStatus === 'pending' ? ' Toʻlovni kutyapmiz.' : ''}${now ? '\n\n' + now : o.status === 'new' ? '\n\nBuyurtma qabul qilindi va tasdiqlanishini kutmoqda.' : ''}`
+          : `Готово! Пришлём сюда все изменения по заказу № ${o.no}.${waitPay}${now ? '\n\n' + now : o.status === 'new' ? '\n\nЗаказ получен и ждёт подтверждения.' : ''}`,
     });
     return Response.json({ ok: true });
   }
