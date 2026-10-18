@@ -92,7 +92,7 @@ export async function POST(req: Request) {
     if (ex.some((x) => x >= d.extras.length)) return err('Неверная добавка. Обновите корзину.');
     const unit = unitPrice(d, i.si, ex);
     if (unit <= 0) return err(lang === 'uz' ? `«${d.name}» narxi hali aniqlanmagan. Telefon orqali buyurtma bering.` : `Цена «${d.name}» ещё уточняется. Закажите по телефону.`);
-    items.push({ id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: '', station: stationOf(menu, st, d.id), sent: false, ks: null as null });
+    items.push({ id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: '', station: stationOf(menu, st, d.id), sent: false, ks: null as null, si: d.sizes.length ? i.si : undefined });
   }
   const subtotal = items.reduce((s, i) => s + i.sum, 0);
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getSettings } from '@/lib/data';
-import { isAdmin } from '@/lib/auth';
+import { canEditSite } from '@/lib/auth';
 import { getLang } from '@/lib/lang';
 import { fmt, handle } from '@/lib/format';
 import { prepRange, siteText, translate, zoneName, type Key } from '@/lib/i18n';
@@ -20,8 +20,8 @@ export default async function ContactsPage() {
   const lang = getLang();
   const t = (k: Key, v?: Record<string, string | number>) => translate(lang, k, v);
   const x = siteText(s, lang);
-  const ed = isAdmin();
-  const miss = (txt: string) => (ed ? <span className="muted">{txt}: заполните в «Управление → Настройки»</span> : null);
+  const ed = await canEditSite();
+  const miss = (txt: string) => (ed ? <span className="muted">{txt}: заполните в «Управление → Ресторан и сайт»</span> : null);
   const addr = [x.address, x.city].filter(Boolean).join(', ');
   const mapHref = s.mapUrl || `https://yandex.uz/maps/?text=${encodeURIComponent(addr || 'Янгиюль')}`;
   const parts: string[] = [];

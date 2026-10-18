@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSettings } from '@/lib/data';
-import { isAdmin } from '@/lib/auth';
+import { canEditSite } from '@/lib/auth';
 import { getLang } from '@/lib/lang';
 import { translate } from '@/lib/i18n';
 import { STORY } from '@/lib/defaults';
@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function StoryPage() {
   const s = await getSettings();
   const lang = getLang();
-  const hint = isAdmin();
+  const hint = await canEditSite();
   return (
     <>
       <section className="masthead g">

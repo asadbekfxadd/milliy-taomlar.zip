@@ -79,6 +79,10 @@ export type KitchenState = 'queued' | 'cooking' | 'ready';
 export type OrderItem = {
   id: string; name: string; mods: string; qty: number; unit: number; sum: number;
   note?: string; station?: string; sent?: boolean; ks?: KitchenState | null; at?: number;
+  /** portion index (for the recipe); absent on orders made before recipes existed */
+  si?: number;
+  /** cancelled after it went to the kitchen: kept on the check, struck through, not charged */
+  void?: { by: string; reason: string; at: number };
 };
 export type OrderStatus = 'new' | 'accepted' | 'cooking' | 'ready' | 'done' | 'cancelled';
 export type PublicOrder = {

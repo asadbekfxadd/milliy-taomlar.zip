@@ -94,7 +94,88 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo     text NOT NULL DEFAULT '';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_pct numeric NOT NULL DEFAULT 0;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_fixed integer NOT NULL DEFAULT 0;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount  integer NOT NULL DEFAULT 0;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS lang      text NOT NULL DEFAULT 'ru';`;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS lang      text NOT NULL DEFAULT 'ru';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS waiter_id text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS tips      integer NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS cashier   text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS shift_id  integer;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS stock_done boolean NOT NULL DEFAULT false;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancel_reason text NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS orders_phone_idx ON orders (phone) WHERE phone <> '';
+CREATE INDEX IF NOT EXISTS orders_paid_idx ON orders (paid_at) WHERE paid_at IS NOT NULL;
+CREATE TABLE IF NOT EXISTS employees (
+  id         text PRIMARY KEY,
+  name       text NOT NULL,
+  role       text NOT NULL,
+  pin_hash   text NOT NULL,
+  phone      text NOT NULL DEFAULT '',
+  active     boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS shifts (
+  id            serial PRIMARY KEY,
+  opened_at     timestamptz NOT NULL DEFAULT now(),
+  opened_by     text NOT NULL,
+  opening_cash  integer NOT NULL DEFAULT 0,
+  closed_at     timestamptz,
+  closed_by     text NOT NULL DEFAULT '',
+  counted_cash  integer,
+  report        jsonb
+);
+CREATE UNIQUE INDEX IF NOT EXISTS shifts_one_open ON shifts ((closed_at IS NULL)) WHERE closed_at IS NULL;
+CREATE TABLE IF NOT EXISTS cash_moves (
+  id         serial PRIMARY KEY,
+  shift_id   integer NOT NULL,
+  kind       text NOT NULL,
+  amount     integer NOT NULL,
+  note       text NOT NULL DEFAULT '',
+  by_name    text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS ingredients (
+  id         text PRIMARY KEY,
+  name       text NOT NULL,
+  unit       text NOT NULL DEFAULT 'кг',
+  stock      numeric NOT NULL DEFAULT 0,
+  min_stock  numeric NOT NULL DEFAULT 0,
+  cost       numeric NOT NULL DEFAULT 0,
+  active     boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS stock_moves (
+  id            serial PRIMARY KEY,
+  ingredient_id text NOT NULL,
+  kind          text NOT NULL,
+  qty           numeric NOT NULL,
+  price         numeric NOT NULL DEFAULT 0,
+  note          text NOT NULL DEFAULT '',
+  order_id      text,
+  by_name       text NOT NULL DEFAULT '',
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS stock_moves_ing_idx ON stock_moves (ingredient_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS stock_moves_at_idx ON stock_moves (created_at DESC);
+CREATE TABLE IF NOT EXISTS recipes (
+  dish_id    text NOT NULL,
+  si         integer NOT NULL DEFAULT -1,
+  lines      jsonb NOT NULL DEFAULT '[]',
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (dish_id, si)
+);
+CREATE TABLE IF NOT EXISTS audit_log (
+  id         serial PRIMARY KEY,
+  at         timestamptz NOT NULL DEFAULT now(),
+  who        text NOT NULL DEFAULT '',
+  role       text NOT NULL DEFAULT '',
+  action     text NOT NULL,
+  details    text NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS audit_at_idx ON audit_log (at DESC);
+CREATE TABLE IF NOT EXISTS customer_notes (
+  phone      text PRIMARY KEY,
+  note       text NOT NULL DEFAULT '',
+  updated_at timestamptz NOT NULL DEFAULT now()
+);`;
 
 function ready() {
   if (!g.pgReady)
@@ -123,6 +204,7 @@ export type OrderRow = {
   source: string; tableNo: number | null; guests: number; waiter: string; service: number; paidWith: string; paidAt: string | null;
   payStatus: string; acceptedAt: string | null; etaAt: string | null; customerChat: number | null;
   promo: string; promoPct: number; promoFixed: number; discount: number; lang: string;
+  waiterId: string; tips: number; cashier: string; shiftId: number | null; cancelReason: string;
 };
 export const mapOrder = (r: any): OrderRow => ({
   id: r.id, no: r.no, token: r.token, status: r.status, type: r.type, zone: r.zone, fee: r.fee, address: r.address,
@@ -133,6 +215,7 @@ export const mapOrder = (r: any): OrderRow => ({
   payStatus: r.pay_status ?? 'unpaid', acceptedAt: r.accepted_at ? new Date(r.accepted_at).toISOString() : null,
   etaAt: r.eta_at ? new Date(r.eta_at).toISOString() : null, customerChat: r.customer_chat ? Number(r.customer_chat) : null,
   promo: r.promo ?? '', promoPct: Number(r.promo_pct ?? 0), promoFixed: r.promo_fixed ?? 0, discount: r.discount ?? 0, lang: r.lang ?? 'ru',
+  waiterId: r.waiter_id ?? '', tips: r.tips ?? 0, cashier: r.cashier ?? '', shiftId: r.shift_id ?? null, cancelReason: r.cancel_reason ?? '',
 });
 
 export async function getOrder(id: string) {

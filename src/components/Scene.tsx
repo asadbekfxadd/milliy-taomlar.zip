@@ -19,7 +19,7 @@ export default function Scene({ i, s, lang, showHint }: { i: number; s: Settings
           <p style={{ marginTop: 18, color: 'var(--cream)' }}>{own}</p>
         ) : showHint ? (
           <div className="ph-note">
-            <b>Место для вашей истории.</b> Расскажите, как это устроено именно у вас: «Управление → Настройки». Гости эту подсказку не видят.
+            <b>Место для вашей истории.</b> Расскажите, как это устроено именно у вас: «Управление → Ресторан и сайт». Гости эту подсказку не видят.
           </div>
         ) : null}
       </div>

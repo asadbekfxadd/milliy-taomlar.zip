@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { guard } from '@/lib/auth';
 import { sendTest, setWebhook } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  if (!isAdmin()) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const g = await guard('settings');
+  if ('res' in g) return g.res;
   if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID)
     return NextResponse.json({ ok: false, description: 'Не заданы TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID' });
   const { action } = await req.json().catch(() => ({ action: '' }));

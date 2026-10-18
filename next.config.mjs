@@ -4,6 +4,16 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['sharp', 'pg'],
   },
+  async redirects() {
+    // the old staff screens moved: keep bookmarks and kiosk shortcuts working
+    return [
+      { source: '/staff', destination: '/pos', permanent: false },
+      { source: '/staff/pos', destination: '/pos', permanent: false },
+      { source: '/staff/kitchen', destination: '/kitchen', permanent: false },
+      { source: '/staff/print', destination: '/print', permanent: false },
+      { source: '/staff/tables', destination: '/admin/tables', permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

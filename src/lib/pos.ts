@@ -4,10 +4,13 @@ import { getOrder, mapOrder, q, setOrderStatus, type OrderRow } from './db';
 import { notifyNewOrder, refreshOrderMessage } from './telegram';
 import { etaText, paidText, stageText, tellGuest } from './notify';
 import { modsOf, unitPrice } from './pricing';
+import { deductForOrder, returnForOrder } from './stock';
+import { STATIONS as ST } from './rbac';
 
 /* Restaurant floor logic shared by the waiter screen, online orders, kitchen screen and print station. */
 
-export const STATIONS: Record<string, string> = { kitchen: 'Кухня', mangal: 'Мангал', bar: 'Бар', cashier: 'Касса' };
+export const STATIONS = ST;
+const live = (items: OrderItem[]) => items.filter((l) => !l.void);
 
 export function stationOf(menu: Menu, st: Settings, dishId: string) {
   const d = menu.dishes.find((x) => x.id === dishId);
@@ -24,11 +27,11 @@ export function priceLine(menu: Menu, st: Settings, i: { id: string; si: number;
   if (ex.some((x) => x >= d.extras.length)) return 'Неверная добавка';
   const unit = unitPrice(d, i.si, ex);
   if (unit <= 0) return `У «${d.name}» не указана цена — добавьте её в управлении`;
-  return { id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: i.note || '', station: stationOf(menu, st, d.id), sent: false, ks: null };
+  return { id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: i.note || '', station: stationOf(menu, st, d.id), sent: false, ks: null, si: d.sizes.length ? i.si : undefined };
 }
 
 export function totals(o: { type: string; fee: number; items: OrderItem[]; promoPct?: number; promoFixed?: number }, st: Settings) {
-  const subtotal = o.items.reduce((s, l) => s + l.unit * l.qty, 0);
+  const subtotal = live(o.items).reduce((s, l) => s + l.unit * l.qty, 0);
   const service = o.type === 'hall' ? Math.round((subtotal * (st.servicePct || 0)) / 100) : 0;
   // a promo applied at checkout follows later changes: percent is recalculated, a fixed sum never exceeds the dishes
   const discount = o.promoPct ? Math.round((subtotal * o.promoPct) / 100) : Math.min(o.promoFixed || 0, subtotal);
@@ -52,6 +55,12 @@ export async function saveItems(o: OrderRow, items: OrderItem[], st: Settings, e
 /** One place that reacts to a status change: tells the guest and refreshes the staff Telegram card. */
 export async function afterChange(prev: OrderRow, next: OrderRow, st: Settings) {
   if (prev.status === next.status) return;
+  try {
+    if (next.status === 'done') await deductForOrder(next.id, next.no);
+    else if (prev.status === 'done') await returnForOrder(next.id, next.no);
+  } catch (e) {
+    console.error('stock', e);
+  }
   try {
     await tellGuest(next, stageText(next, st.phone));
     if (next.source === 'site') await refreshOrderMessage(next);
@@ -107,7 +116,7 @@ async function enqueue(jobs: Job[]) {
 /** Send every unsent line to its station: marks lines as queued for the kitchen screen and prints a runner per station. */
 export async function sendToKitchen(o: OrderRow, st: Settings, opts: { slip?: boolean } = {}) {
   const items: OrderItem[] = (o.items as OrderItem[]).map((l) => ({ ...l }));
-  const fresh = items.map((l, i) => ({ l, i })).filter(({ l }) => !l.sent);
+  const fresh = items.map((l, i) => ({ l, i })).filter(({ l }) => !l.sent && !l.void);
   const isAddition = items.some((l) => l.sent);
   if (!fresh.length) return { order: o, sent: 0 };
   const now = Date.now();
@@ -148,7 +157,7 @@ export function checkBody(o: OrderRow, st: Settings, kind: 'precheck' | 'receipt
     waiter: o.waiter,
     guests: o.guests,
     at: Date.now(),
-    lines: (o.items as OrderItem[]).map(({ name, mods, qty, unit, sum }) => ({ name, mods, qty, unit, sum })),
+    lines: live(o.items as OrderItem[]).map(({ name, mods, qty, unit, sum }) => ({ name, mods, qty, unit, sum })),
     subtotal: o.subtotal,
     service: o.service,
     servicePct: st.servicePct,
@@ -156,6 +165,7 @@ export function checkBody(o: OrderRow, st: Settings, kind: 'precheck' | 'receipt
     discount: o.discount,
     promo: o.promo,
     total: o.total,
+    tips: o.tips,
     pay: o.paidWith || o.pay,
     customer: o.source === 'site' ? { name: o.name, phone: o.phone, address: o.address, zone: o.zone, when: o.when, note: o.note } : null,
   };
@@ -174,13 +184,39 @@ export async function kitchenMove(id: string, lineIdx: number[], to: 'cooking' |
     const l = items[i];
     if (l && l.sent && l.ks !== 'ready') l.ks = to;
   });
-  const sent = items.filter((l) => l.sent);
+  const sent = items.filter((l) => l.sent && !l.void);
   let status = o.status;
   if (!['done', 'cancelled'].includes(o.status)) {
     if (sent.length && sent.every((l) => l.ks === 'ready')) status = 'ready';
     else if (sent.some((l) => l.ks === 'cooking' || l.ks === 'ready')) status = 'cooking';
   }
   return saveItems(o, items, st, { status });
+}
+
+/** Cancel a line that already went to the kitchen: it stays on the check struck through, the station gets an "ОТМЕНА" slip. */
+export async function voidLine(o: OrderRow, idx: number, qty: number, reason: string, by: string, st: Settings) {
+  const items: OrderItem[] = (o.items as OrderItem[]).map((l) => ({ ...l }));
+  const l = items[idx];
+  if (!l || l.void || !l.sent) return null;
+  const n = Math.max(1, Math.min(qty, l.qty));
+  const mark = { by, reason, at: Date.now() };
+  if (n < l.qty) {
+    l.qty -= n;
+    items.splice(idx + 1, 0, { ...l, qty: n, sum: l.unit * n, void: mark });
+  } else l.void = mark;
+  const saved = await saveItems(o, items, st);
+  // the order may now be fully ready / empty
+  const sent = items.filter((x) => x.sent && !x.void);
+  if (sent.length && sent.every((x) => x.ks === 'ready') && ['accepted', 'cooking'].includes(saved.status)) await setOrderStatus(o.id, 'ready');
+  await enqueue([
+    {
+      station: l.station || 'kitchen',
+      kind: 'runner',
+      orderId: o.id,
+      body: { cancel: true, reason, title: STATIONS[l.station || 'kitchen'] || 'Кухня', place: placeLabel(saved), no: saved.no, waiter: saved.waiter, at: Date.now(), lines: [{ name: l.name, mods: l.mods, qty: n, note: '' }] },
+    },
+  ]);
+  return (await getOrder(o.id))!;
 }
 
 export async function openOrders() {

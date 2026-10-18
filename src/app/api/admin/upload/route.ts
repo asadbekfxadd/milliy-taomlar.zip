@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
-import { isAdmin } from '@/lib/auth';
+import { guardAny } from '@/lib/auth';
 import { newId, q } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,8 @@ export const runtime = 'nodejs';
 const MAX = 15 * 1024 * 1024;
 
 export async function POST(req: Request) {
-  if (!isAdmin()) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  const g = await guardAny(['menu', 'settings']);
+  if ('res' in g) return g.res;
   const form = await req.formData().catch(() => null);
   const file = form?.get('file');
   if (!file || typeof file === 'string') return NextResponse.json({ error: 'Файл не получен' }, { status: 400 });

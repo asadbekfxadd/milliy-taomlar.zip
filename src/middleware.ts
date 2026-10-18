@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-/* Shareable language links: /menu?lang=ru remembers Russian and shows the clean URL. */
 export function middleware(req: NextRequest) {
+  // staff area: pass the path on, so a sign-in redirect can come back to the same page
+  if (/^\/(admin|pos|waiter|kitchen|print)(\/|$)/.test(req.nextUrl.pathname)) {
+    const h = new Headers(req.headers);
+    h.set('x-path', req.nextUrl.pathname + req.nextUrl.search);
+    return NextResponse.next({ request: { headers: h } });
+  }
+  /* Shareable language links: /menu?lang=ru remembers Russian and shows the clean URL. */
   const lang = req.nextUrl.searchParams.get('lang');
   if (lang !== 'uz' && lang !== 'ru') return NextResponse.next();
   const url = req.nextUrl.clone();
@@ -11,4 +17,4 @@ export function middleware(req: NextRequest) {
   return res;
 }
 
-export const config = { matcher: ['/((?!api|_next|art|staff|admin|.*\\..*).*)'] };
+export const config = { matcher: ['/((?!api|_next|art|staff|.*\\..*).*)'] };

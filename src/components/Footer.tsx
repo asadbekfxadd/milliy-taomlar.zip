@@ -82,7 +82,7 @@ export default function Footer({ s, lang }: { s: Settings; lang: Lang }) {
             <span>
               © {new Date().getFullYear()} {s.name}
             </span>
-            <a href="/staff" className="credit" rel="nofollow">
+            <a href="/login" className="credit" rel="nofollow">
               {t('f.staff')}
             </a>
             <span className="credit">
