@@ -447,3 +447,32 @@ a.kpi:hover{border-color:var(--line2)}
   .phd h1{font-size:23px}
   .pos-actions .primary{grid-column:1/-1}
 }
+
+/* menu as photo tiles (cash desk left side, waiter phone) */
+.mp-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.mp-head h2{font-size:22px;margin:0}
+.mp-top{position:sticky;top:52px;z-index:20;background:var(--bg);padding:8px 0 8px;display:flex;flex-direction:column;gap:8px}
+.mp-sec{scroll-margin-top:150px;margin-bottom:18px}
+.mp-sec h3{font-size:15px;color:var(--mute);margin:6px 0 8px}
+.mp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mp-tile{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:0 0 10px;border-radius:14px;border:1px solid var(--line2);background:var(--card);color:var(--ink);text-align:left;cursor:pointer;overflow:hidden;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.mp-tile:active{transform:scale(.97)}
+.mp-tile.has{border-color:var(--green);box-shadow:0 0 0 2px var(--green)}
+.mp-tile:disabled{opacity:.5;cursor:not-allowed}
+.mp-ph{position:relative;display:block;aspect-ratio:4/3;background:var(--soft);overflow:hidden}
+.mp-ph .ph{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto}
+.mp-ph i{position:absolute;top:6px;right:6px;min-width:28px;height:28px;padding:0 7px;border-radius:999px;background:var(--green);color:#fff;font-style:normal;font-weight:800;font-size:15px;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.mp-tile b{font-size:14px;line-height:1.2;padding:0 10px;font-weight:700}
+.mp-price{padding:0 10px;color:var(--green);font-weight:800;font-size:14px}
+.mp-tile:disabled .mp-price{color:var(--red)}
+.mp-bar{display:none}
+.wt-bottom{z-index:25}
+@media (max-width:980px){
+  .pos.menu-mode .pos-floor{display:block}
+  .pos.menu-mode .pos-check{display:none}
+  .pos.menu-mode.show-check .pos-floor{display:none}
+  .pos.menu-mode.show-check .pos-check{display:flex}
+  .mp-bar{display:flex;gap:8px;position:sticky;bottom:0;z-index:25;background:linear-gradient(transparent,var(--bg) 22%);padding:16px 0 calc(8px + env(safe-area-inset-bottom,0px))}
+  .mp-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+}
+@media (max-width:420px){.mp-grid{grid-template-columns:1fr 1fr}}

@@ -38,7 +38,7 @@ export default function Waiter() {
 
   async function openTable(n: number) {
     const ex = byTable.get(n);
-    setAdding(false);
+    setAdding(true);
     if (ex) return setSel(ex.id);
     setBusy(true);
     try {
@@ -140,46 +140,47 @@ export default function Waiter() {
         {ready > 0 && <span className="chip ok">готово к подаче: {ready}</span>}
       </div>
 
-      <Lines o={cur} busy={busy} onQty={(i, q) => run({ action: 'qty', line: i, qty: q })} onVoid={(i) => setModal({ k: 'void', line: i })} />
-      <div style={{ margin: '12px 0' }}>
-        <Totals o={cur} />
-      </div>
-
       {adding ? (
-        <div className="box" style={{ padding: 12 }}>
-          <div className="box-head">
-            <h2>Добавить блюда</h2>
-            <button className="b sm" onClick={() => setAdding(false)}>
-              Свернуть меню
+        <>
+          <MenuPicker key={cur.id} o={cur} onAdd={(items) => act(cur.id, { action: 'add', items })} />
+          <div className="wt-bottom">
+            <button className="sx-btn ok grow" onClick={() => setAdding(false)}>
+              Чек · {live.length} поз. · {fmt(cur.total)}
+            </button>
+            <button className="sx-btn primary" disabled={!unsent || busy} onClick={() => run({ action: 'send' }, 'Ушло на кухню')}>
+              На кухню{unsent ? ` · ${unsent}` : ''}
             </button>
           </div>
-          <MenuPicker busy={busy} onAdd={(it) => run({ action: 'add', items: [it] }, 'Добавлено')} />
-        </div>
+        </>
       ) : (
-        <button className="sx-btn wide" onClick={() => setAdding(true)}>
-          + Добавить блюда
-        </button>
-      )}
-
-      <div className="sx-row" style={{ justifyContent: 'space-between', margin: '14px 0' }}>
-        <button className="sx-link" onClick={() => setModal({ k: 'move' })}>
-          Пересадить
-        </button>
-        <button className="sx-link danger" onClick={() => setModal({ k: 'void', line: 'check' })}>
-          Отменить чек
-        </button>
-      </div>
-
-      <div className="wt-bottom">
-        <button className="sx-btn primary grow" disabled={!unsent || busy} onClick={async () => (await run({ action: 'send' }, 'Ушло на кухню')) && setAdding(false)}>
-          На кухню{unsent ? ` · ${unsent}` : ''}
-        </button>
-        {settings.printGuestChecks && (
-          <button className="sx-btn" disabled={!live.length || busy || unsent > 0} onClick={() => run({ action: 'precheck' }, 'Пречек печатается на кассе')}>
-            Счёт гостю
+        <>
+          <Lines o={cur} busy={busy} onQty={(i, q) => run({ action: 'qty', line: i, qty: q })} onVoid={(i) => setModal({ k: 'void', line: i })} />
+          <div style={{ margin: '12px 0' }}>
+            <Totals o={cur} />
+          </div>
+          <button className="sx-btn wide" onClick={() => setAdding(true)}>
+            + Добавить блюда
           </button>
-        )}
-      </div>
+          <div className="sx-row" style={{ justifyContent: 'space-between', margin: '14px 0' }}>
+            <button className="sx-link" onClick={() => setModal({ k: 'move' })}>
+              Пересадить
+            </button>
+            <button className="sx-link danger" onClick={() => setModal({ k: 'void', line: 'check' })}>
+              Отменить чек
+            </button>
+          </div>
+          <div className="wt-bottom">
+            <button className="sx-btn primary grow" disabled={!unsent || busy} onClick={() => run({ action: 'send' }, 'Ушло на кухню')}>
+              На кухню{unsent ? ` · ${unsent}` : ''}
+            </button>
+            {settings.printGuestChecks && (
+              <button className="sx-btn" disabled={!live.length || busy || unsent > 0} onClick={() => run({ action: 'precheck' }, 'Пречек печатается на кассе')}>
+                Счёт гостю
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       {modal?.k === 'void' && <VoidModal o={cur as StaffOrder} line={modal.line} onClose={() => (setModal(null), modal.line === 'check' && setSel(null))} />}
       {modal?.k === 'move' && <MoveModal o={cur} onClose={() => setModal(null)} />}

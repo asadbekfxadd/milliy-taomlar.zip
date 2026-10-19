@@ -14,6 +14,8 @@ export default function Pos() {
   const [modal, setModal] = useState<null | { k: 'pay' } | { k: 'void'; line: number | 'check' } | { k: 'move' } | { k: 'shift'; mode: 'open' | 'in' | 'out' | 'close' }>(null);
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<'board' | 'hall'>('hall');
+  const [showCheck, setShowCheck] = useState(false);
+  useEffect(() => setShowCheck(false), [sel]);
 
   useEffect(() => {
     try {
@@ -69,8 +71,30 @@ export default function Pos() {
   return (
     <>
       <ShiftStrip onAction={(mode) => setModal({ k: 'shift', mode })} />
-      <div className={`pos ${cur ? 'has-sel' : ''}`}>
+      <div className={`pos ${cur ? 'has-sel' : ''} ${cur && !closed ? 'menu-mode' : ''} ${showCheck ? 'show-check' : ''}`}>
         <section className="pos-floor">
+          {cur && !closed ? (
+            <>
+              <div className="mp-head">
+                <button className="b" onClick={() => (setSel(null), setShowCheck(false))}>
+                  ← Столы
+                </button>
+                <h2>
+                  {placeOf(cur)} <span className="sx-muted small">· чек № {cur.no}</span>
+                </h2>
+              </div>
+              <MenuPicker key={cur.id} o={cur} onAdd={(items) => act(cur.id, { action: 'add', items })} />
+              <div className="mp-bar">
+                <button className="sx-btn ok grow" onClick={() => setShowCheck(true)}>
+                  Чек · {live.length} поз. · {fmt(cur.total)}
+                </button>
+                <button className="sx-btn primary" disabled={!unsent || busy} onClick={() => run({ action: cur.status === 'new' ? 'accept' : 'send' }, 'Отправлено на кухню')}>
+                  На кухню{unsent ? ` · ${unsent}` : ''}
+                </button>
+              </div>
+            </>
+          ) : (
+          <>
           <div className="pos-views">
             <div className="seg">
               <button className={view === 'hall' ? 'on' : ''} onClick={() => pickView('hall')}>
@@ -149,6 +173,8 @@ export default function Pos() {
               )}
             </>
           )}
+          </>
+          )}
         </section>
 
         <section className="pos-check" aria-label="Чек">
@@ -160,8 +186,8 @@ export default function Pos() {
           ) : (
             <>
               <div className="pos-check-head">
-                <button className="sx-link back" onClick={() => setSel(null)}>
-                  ← Все столы
+                <button className="sx-link back" onClick={() => (closed ? setSel(null) : setShowCheck(false))}>
+                  {closed ? '← Все столы' : '← К меню'}
                 </button>
                 <div>
                   <h2>{placeOf(cur)}</h2>
@@ -247,8 +273,6 @@ export default function Pos() {
                       </button>
                     )}
                   </div>
-
-                  <MenuPicker busy={busy} onAdd={(it) => run({ action: 'add', items: [it] })} />
 
                   <div className="pos-danger">
                     {cur.type === 'hall' ? (
