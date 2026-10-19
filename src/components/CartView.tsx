@@ -18,7 +18,7 @@ export default function CartView() {
   const router = useRouter();
   const closed = useClosed();
   const { lines, subtotal } = useMemo(() => priceCart(menu, cart), [menu, cart]);
-  const types = [st.pickup && 'pickup', st.delivery && 'delivery'].filter(Boolean) as ('pickup' | 'delivery')[];
+  const types = [st.delivery && 'delivery', st.pickup && 'pickup'].filter(Boolean) as ('pickup' | 'delivery')[];
   const [type, setType] = useState<'pickup' | 'delivery' | 'hall' | null>(types[0] ?? null);
   const [table, setTable] = useState<number | null>(null);
   const [zone, setZone] = useState(0);
@@ -38,6 +38,8 @@ export default function CartView() {
       const saved = JSON.parse(localStorage.getItem('mt-contact') || 'null');
       if (saved) setF((x) => ({ ...x, name: saved.name || '', phone: saved.phone || '', address: saved.address || '' }));
       setLast(JSON.parse(localStorage.getItem('mt-order') || 'null'));
+      const m = localStorage.getItem('mt-mode');
+      if ((m === 'pickup' || m === 'delivery') && types.includes(m)) setType(m);
       const tb = readTable();
       if (tb && tb <= (st.tables || 0)) {
         setTable(tb);
@@ -169,11 +171,11 @@ export default function CartView() {
                 <div className="ci" key={l.key}>
                   <DishArt art={l.d.art} photo={l.d.photo} className="round" label={l.d.name} sizes="96px" />
                   <h4>
-                    {l.d.name}
+                    {lang === 'ru' ? l.d.ru || l.d.name : l.d.name}
                     {!l.d.available && <span className="soldout"> · {t('dish.soldout')}</span>}
                   </h4>
                   <div className="mods">
-                    {[lang === 'ru' ? l.d.ru : '', l.d.sizes.length > 1 ? sizeLabel(l.d.sizes[l.si] ?? l.d.sizes[0], lang) : '', ...l.ex.map((i) => (l.d.extras[i] ? extraLabel(l.d.extras[i], lang) : ''))]
+                    {[l.d.sizes.length > 1 ? sizeLabel(l.d.sizes[l.si] ?? l.d.sizes[0], lang) : '', ...l.ex.map((i) => (l.d.extras[i] ? extraLabel(l.d.extras[i], lang) : ''))]
                       .filter(Boolean)
                       .join(' · ')}
                   </div>

@@ -4,8 +4,10 @@ import { getLang } from '@/lib/lang';
 import { publicMenu, publicSettings } from '@/lib/promo';
 import { translate } from '@/lib/i18n';
 import Providers from '@/components/Providers';
-import { Header, Reveal, TabBar } from '@/components/Chrome';
-import Footer from '@/components/Footer';
+import { Reveal } from '@/components/Chrome';
+import '../store.css';
+import StoreHeader from '@/components/store/StoreHeader';
+import StoreFooter from '@/components/store/StoreFooter';
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [menu, settings] = await Promise.all([getMenu(), getSettings()]);
@@ -26,12 +28,13 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         {translate(lang, 'nav.skip')}
       </a>
       <Providers menu={publicMenu(menu)} settings={publicSettings(settings)} lang={lang} online={providers()}>
-        <Header />
-        <main id="main" tabIndex={-1} className="enter">
-          {children}
-        </main>
-        <Footer s={settings} lang={lang} />
-        <TabBar />
+        <div className="st">
+          <StoreHeader />
+          <main id="main" tabIndex={-1}>
+            {children}
+          </main>
+          <StoreFooter s={settings} lang={lang} />
+        </div>
         <Reveal />
       </Providers>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />

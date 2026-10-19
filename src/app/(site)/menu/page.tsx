@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import MenuView from '@/components/MenuView';
+import Store from '@/components/store/Store';
 import { getLang } from '@/lib/lang';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,5 +14,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function MenuPage() {
-  return <MenuView />;
+  return <Store />;
 }
