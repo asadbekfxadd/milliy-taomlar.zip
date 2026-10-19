@@ -3,6 +3,7 @@ import type { Settings } from '@/lib/types';
 import { handle } from '@/lib/format';
 import { PHOTO_CREDITS } from '@/lib/defaults';
 import { siteText, type Lang } from '@/lib/i18n';
+import Girih from '../Girih';
 
 export default function StoreFooter({ s, lang }: { s: Settings; lang: Lang }) {
   const L = (uz: string, ru: string) => (lang === 'uz' ? uz : ru);
@@ -10,6 +11,9 @@ export default function StoreFooter({ s, lang }: { s: Settings; lang: Lang }) {
   const addr = [x.address, x.city].filter(Boolean).join(', ');
   return (
     <footer className="s-foot">
+      <div className="s-band" aria-hidden="true">
+        <Girih w={1600} h={64} step={64} />
+      </div>
       <div className="s-wrap">
         <div>
           <Link href="/" className="s-logo" style={{ marginBottom: 12 }}>

@@ -272,3 +272,78 @@ body:has(.st) .opt-h{font-size:14px;font-weight:700;color:var(--s-ink)}
 body:has(.st) .modal .btn{text-transform:none;letter-spacing:0;border-radius:14px;background:var(--s-ink);border-color:var(--s-ink);color:#fff;font-size:16px;font-weight:800;box-shadow:none}
 body:has(.st) .modal .stepper{border-radius:14px}
 body:has(.st) .toast{background:var(--s-ink);color:#fff}
+
+/* ===== Rishtan: the one signature. Cobalt-and-turquoise ceramics of the Fergana valley —
+   the plates the dishes are served on. It shows up as plate rims (stories, cards in the cart),
+   the girih lattice on the banners, the star before each section, and the band above the footer.
+   Everything else stays quiet: white page, ink text, food photos lead. ===== */
+.st,body:has(.st){
+  --s-lapis:#1C4F9C;
+  --s-lapis-2:#163F7E;
+  --s-turq:#1E98A0;
+  --s-lapis-soft:#EAF0FA;
+  --s-soft:#F3F4F6;
+  --s-soft2:#E7E9EE;
+  --s-ink:#141821;
+  --s-mute:#626876;
+  --s-line:#E3E6EC;
+}
+/* stories: a dotted plate rim instead of the generic gradient ring */
+.s-story span:first-child{background:
+  repeating-conic-gradient(from 0deg,var(--s-lapis) 0 7deg,#fff 7deg 9deg,var(--s-turq) 9deg 16deg,#fff 16deg 18deg);
+  padding:4px;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.s-story:hover span:first-child{transform:rotate(24deg)}
+.s-story:hover span:first-child>*{transform:rotate(-24deg)}
+.s-story span:first-child>*{transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.s-story small{color:var(--s-ink)}
+
+/* banners: deep cobalt with a gold girih lattice; dish photos sit on rimmed plates */
+.s-slide{background:var(--s-lapis-2)}
+.s-slide.warm{background:#3A1C0C}
+.s-slide.green{background:#0F3B3E}
+.s-slide .lattice{position:absolute;inset:0 auto 0 0;width:62%;opacity:.16;pointer-events:none;z-index:1;-webkit-mask-image:linear-gradient(90deg,#000 40%,transparent);mask-image:linear-gradient(90deg,#000 40%,transparent)}
+.s-slide .lattice svg{width:100%;height:100%;display:block}
+.s-slide .lattice path{fill:none;stroke:var(--s-gold);stroke-width:1.4}
+.s-slide .pics .p{box-shadow:0 0 0 6px rgba(255,255,255,.95),0 0 0 9px var(--s-turq),0 30px 60px -20px rgba(0,0,0,.7)}
+.s-slide::after{border-color:rgba(226,181,101,.45);inset:10px;border-radius:24px}
+
+/* section titles: the eight-point star from the tiles */
+.s-sec h2{display:flex;align-items:center;gap:12px}
+.s-star{width:26px;height:26px;color:var(--s-lapis);flex:none}
+
+/* cards */
+.s-card .pic{transition:box-shadow .3s}
+.s-card .pic .ph img{transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.s-card:hover .pic .ph img{transform:scale(1.04)}
+.s-card.in .pic{box-shadow:inset 0 0 0 3px var(--s-lapis)}
+.s-card.in .pic::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 3px var(--s-lapis);z-index:2;pointer-events:none}
+.s-add{transition:background .2s,color .2s}
+.s-add:not(:disabled):hover{background:var(--s-lapis);color:#fff}
+.s-step{background:var(--s-lapis)}
+.s-cats button.on,.s-mode button.on{background:var(--s-ink)}
+.s-cartbtn .n,.s-mbar .n{background:var(--s-mango)}
+.s-card .tag{background:var(--s-turq);color:#fff}
+/* the plate gives a little turn when a portion lands in the cart */
+@keyframes plate-a{0%{transform:rotate(0)}40%{transform:rotate(-10deg) scale(.97)}100%{transform:rotate(0)}}
+@keyframes plate-b{0%{transform:rotate(0)}40%{transform:rotate(-10deg) scale(.97)}100%{transform:rotate(0)}}
+.s-card .pic.spin1 .ph{animation:plate-a .55s cubic-bezier(.2,.8,.2,1)}
+.s-card .pic.spin0 .ph{animation:plate-b .55s cubic-bezier(.2,.8,.2,1)}
+
+/* footer band */
+.s-band{height:64px;overflow:hidden;background:var(--s-lapis-2)}
+.s-band svg{width:100%;height:64px;display:block}
+.s-band path{fill:none;stroke:var(--s-turq);stroke-width:1.3;opacity:.7}
+.s-foot{margin-top:0}
+.s-logo i{background:var(--s-lapis-2)}
+@media (prefers-reduced-motion:reduce){.s-card .pic .ph{animation:none!important}.s-story span:first-child,.s-story span:first-child>*{transition:none}}
+/* the banner keeps the serif wordmark: the one place the type is allowed to be ceremonial */
+.st .s-slide .brand,.st .s-slide h2,.st .s-slide .big{font-family:var(--f-display),Georgia,serif}
+.st .s-slide .brand{font-weight:700;letter-spacing:.06em}
+.st .s-slide h2{font-weight:600;letter-spacing:0}
+.st .s-slide .big{white-space:nowrap;font-weight:700;font-size:clamp(30px,4vw,60px)}
+.st .s-logo i{font-family:var(--f-display),Georgia,serif;color:var(--s-gold)}
+@media (max-width:860px){
+  .s-slide .pics{opacity:.22}
+  .s-slide .pics .p{box-shadow:none}
+  .st .s-slide .big{font-size:clamp(26px,7.4vw,36px)}
+}

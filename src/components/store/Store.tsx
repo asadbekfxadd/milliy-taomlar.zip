@@ -8,6 +8,7 @@ import { TAGS } from '@/lib/defaults';
 import { catName, unitText } from '@/lib/i18n';
 import { useSite } from '../Providers';
 import DishArt from '../DishArt';
+import Girih, { StarMark } from '../Girih';
 import { readTable } from '../TableEntry';
 import { useMode, type Mode } from './mode';
 
@@ -24,9 +25,14 @@ export function StoreCard({ d }: { d: Dish }) {
   const simple = !hasOptions(d);
   const badge = d.tags.find((x) => TAGS[x]?.badge);
   const weight = unitText(portionLabel(d), lang as 'uz' | 'ru');
+  const [spin, setSpin] = useState(0);
+  const addOne = (e: React.MouseEvent<HTMLButtonElement>) => {
+    add(d.id, 0, [], 1, e.currentTarget, true);
+    setSpin((x) => x + 1);
+  };
   return (
-    <article className="s-card" data-fly onClick={() => openDish(d.id)}>
-      <div className="pic">
+    <article className={`s-card ${inCart ? 'in' : ''}`} data-fly onClick={() => openDish(d.id)}>
+      <div className={`pic ${spin ? 'spin' + (spin % 2) : ''}`}>
         {badge && <span className="tag">{TAGS[badge][lang as 'uz' | 'ru']}</span>}
         <DishArt art={d.art} photo={d.photo} label={nameOf(d, lang)} sizes="(max-width: 860px) 50vw, 260px" />
       </div>
@@ -58,12 +64,12 @@ export function StoreCard({ d }: { d: Dish }) {
               −
             </button>
             <b>{inCart}</b>
-            <button aria-label={L(lang, 'Koʻpaytirish', 'Больше')} onClick={(e) => add(d.id, 0, [], 1, e.currentTarget, true)}>
+            <button aria-label={L(lang, 'Koʻpaytirish', 'Больше')} onClick={addOne}>
               +
             </button>
           </div>
         ) : (
-          <button className="s-add" onClick={(e) => (simple ? add(d.id, 0, [], 1, e.currentTarget, true) : openDish(d.id))}>
+          <button className="s-add" onClick={(e) => (simple ? addOne(e) : openDish(d.id))}>
             {simple ? '+ ' + L(lang, 'Qoʻshish', 'Добавить') : L(lang, 'Tanlash', 'Выбрать')}
             {!simple && inCart > 0 ? ` · ${inCart}` : ''}
           </button>
@@ -152,7 +158,10 @@ export default function Store() {
         <div>
           {cats.map(({ c, ds }) => (
             <section key={c.id} id={'cat-' + c.id} className="s-sec">
-              <h2>{catName(c, lang)}</h2>
+              <h2>
+                <StarMark className="s-star" />
+                {catName(c, lang)}
+              </h2>
               <div className="s-grid">
                 {ds.map((d) => (
                   <StoreCard key={d.id} d={d} />
@@ -266,6 +275,9 @@ function Banners({ onCat }: { onCat: (id: string) => void }) {
       <div className="s-track" ref={track}>
         {slides.map((s) => (
           <div key={s.key} className={`s-slide ${s.cls}`} onClick={s.onClick} role={s.onClick ? 'button' : undefined} style={s.onClick ? { cursor: 'pointer' } : undefined}>
+            <div className="lattice" aria-hidden="true">
+              <Girih w={700} h={520} step={130} />
+            </div>
             <div className="copy">{s.body}</div>
             <div className="pics" aria-hidden="true">
               {s.pics.slice(0, 3).map((d, k) => (
