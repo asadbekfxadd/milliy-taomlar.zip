@@ -5,7 +5,8 @@ type Emp = { id: string; name: string; role: string };
 
 export default function LoginForm({ employees, next }: { employees: Emp[]; next: string }) {
   const [who, setWho] = useState<Emp | null>(null);
-  const [owner, setOwner] = useState(false);
+  // before any employee exists, the only useful first step is the owner's password
+  const [owner, setOwner] = useState(employees.length === 0);
   const [pin, setPin] = useState('');
   const [pw, setPw] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -52,7 +53,9 @@ export default function LoginForm({ employees, next }: { employees: Emp[]; next:
       >
         <h2>Вход владельца</h2>
         <p className="muted" style={{ margin: 0 }}>
-          Пароль из переменной ADMIN_PASSWORD на Railway. Он работает всегда, даже если сотрудники ещё не добавлены.
+          {noStaff
+            ? 'Первый вход: введите пароль владельца — тот же, что был у админки (ADMIN_PASSWORD в Railway). Потом в разделе «Сотрудники» добавьте кассира, официантов и поваров с их PIN.'
+            : 'Пароль из переменной ADMIN_PASSWORD на Railway. Он работает всегда.'}
         </p>
         <label className="f">
           <span>Пароль</span>
@@ -61,7 +64,7 @@ export default function LoginForm({ employees, next }: { employees: Emp[]; next:
         {err && <div className="err" role="alert">{err}</div>}
         <div className="sx-row">
           <button type="button" className="b" onClick={() => (setOwner(false), setErr(null))}>
-            Назад
+            {noStaff ? 'Общий PIN кассы' : 'Назад'}
           </button>
           <button className="b main" disabled={busy || !pw} style={{ flex: 1 }}>
             {busy ? 'Входим…' : 'Войти'}
