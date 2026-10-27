@@ -92,6 +92,8 @@ export const NAV: NavItem[] = [
   { group: 'Гости', label: 'Акции и баллы', href: '/admin/offers', perm: 'promos', icon: 'gift' },
   { group: 'Гости', label: 'Промокоды', href: '/admin/promos', perm: 'promos', icon: 'tag' },
   { group: 'Отчёты', label: 'Аналитика', href: '/admin/analytics', perm: 'analytics', icon: 'chart' },
+  { group: 'Отчёты', label: 'Сотрудники и ABC', href: '/admin/reports', perm: 'analytics', icon: 'users' },
+  { group: 'Отчёты', label: 'Деньги и расходы', href: '/admin/finance', perm: 'finance', icon: 'wallet' },
   { group: 'Отчёты', label: 'Смены и касса', href: '/admin/shifts', perm: 'finance', icon: 'wallet' },
   { group: 'Настройки', label: 'Сотрудники', href: '/admin/employees', perm: 'employees', icon: 'badge' },
   { group: 'Настройки', label: 'Столы и QR', href: '/admin/tables', perm: 'tables', icon: 'qr' },

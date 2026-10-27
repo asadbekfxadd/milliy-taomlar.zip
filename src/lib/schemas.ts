@@ -141,6 +141,7 @@ export const settingsSchema = z.object({
   deliveryMinutes: z.coerce.number().int().min(0).max(240).default(20),
   printGuestChecks: z.boolean().default(false),
   bookingEnabled: z.boolean().default(true),
+  helpVideo: z.string().trim().url('Ссылка на видео должна начинаться с https://').or(z.literal('')).optional().default(''),
   bookingMaxGuests: z.coerce.number().int().min(1).max(200).default(20),
   happyHours: z.array(happyHour).max(30).optional().default([]),
   deals: z.array(deal).max(50).optional().default([]),

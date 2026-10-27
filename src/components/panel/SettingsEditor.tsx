@@ -97,6 +97,7 @@ export function SettingsPage({ initial }: { initial: Settings }) {
           {t('instagram', 'Instagram', '@account')}
           {t('telegram', 'Telegram', '@account')}
           {t('mapUrl', 'Ссылка на карту', 'https://yandex.uz/maps/…')}
+          {t('helpVideo', 'Видео-инструкция для сотрудников', 'https://youtu.be/…', 'Показывается в «С чего начать» на главной управления')}
           {t('city', 'Город по-русски')}
           {t('cityUz', 'Город по-узбекски')}
           {t('address', 'Адрес по-русски', 'Улица, дом, ориентир')}

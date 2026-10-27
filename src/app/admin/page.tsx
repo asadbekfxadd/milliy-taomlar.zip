@@ -8,6 +8,8 @@ import { currentShift } from '@/lib/shifts';
 import { listIngredients } from '@/lib/stock';
 import { can } from '@/lib/rbac';
 import { Bars } from '@/components/panel/charts';
+import Guide, { type Step } from '@/components/panel/Guide';
+import { getSettings } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 const m = (n: number) => Math.round(n).toLocaleString('ru-RU').replace(/ /g, ' ');
@@ -25,6 +27,11 @@ export default async function Dashboard() {
     listIngredients(),
     q(`SELECT type, source, status, pay_status, table_no, created_at, total FROM orders WHERE status NOT IN ('done','cancelled') AND created_at > now() - interval '1 day'`),
     can(u.role, 'audit') ? q(`SELECT * FROM audit_log ORDER BY id DESC LIMIT 6`) : Promise.resolve({ rows: [] as any[] }),
+  ]);
+  const [st, setup] = await Promise.all([
+    getSettings(),
+    q(`SELECT (SELECT count(*) FROM employees WHERE active)::int AS emp, (SELECT count(*) FROM recipes)::int AS rec, (SELECT count(*) FROM shifts)::int AS sh,
+              (SELECT count(*) FROM suppliers)::int AS sup`),
   ]);
   const listed = menu.dishes.filter((d) => menu.cats.some((c) => c.id === d.cat) && !d.hidden);
   const noPrice = listed.filter((d) => basePrice(d) <= 0);
@@ -44,6 +51,19 @@ export default async function Dashboard() {
   if (stale) todo.push({ t: `Чеки открыты больше 3 часов: ${stale}`, d: 'Проверьте, не забыли ли их закрыть.', href: '/pos', tone: 'new' });
   if (stop.length) todo.push({ t: `В стоп-листе: ${stop.length}`, d: stop.slice(0, 4).map((d) => d.ru || d.name).join(', ') + (stop.length > 4 ? '…' : ''), href: '/admin/menu?f=stop', tone: 'new' });
 
+  const x = setup.rows[0];
+  const steps: Step[] = [
+    { t: 'Добавьте сотрудников', d: 'Кассир, официанты, повар, курьер — у каждого свой PIN и права.', href: '/admin/employees', done: x.emp > 0 },
+    { t: 'Проставьте цены в меню', d: noPrice.length ? `Без цены: ${noPrice.length} блюд. Их нельзя заказать.` : 'Цены есть у всех блюд.', href: '/admin/menu?f=noprice', done: noPrice.length === 0 },
+    { t: 'Укажите столы', d: 'Число столов и QR-наклейки для заказа со стола.', href: '/admin/tables', done: (st.tables || 0) > 0 },
+    { t: 'Зоны доставки и часы работы', d: 'Цена доставки, минимальный заказ, «бесплатно от».', href: '/admin/settings', done: (st.zones || []).length > 0 && Boolean(st.openFrom) },
+    { t: 'Заведите продукты на склад', d: 'Мясо, овощи, мука, напитки — с остатком и ценой.', href: '/admin/stock', done: ings.length > 0 },
+    { t: 'Составьте техкарты', d: 'Тогда склад списывается сам, а отчёты считают себестоимость.', href: '/admin/recipes', done: x.rec > 0 },
+    { t: 'Добавьте поставщиков', d: 'Для автозаказа и учёта долгов.', href: '/admin/stock', done: x.sup > 0 },
+    { t: 'Подключите Telegram', d: 'Заказы в чат, уведомления гостям, бот с меню и баллами.', href: '/admin/integrations', done: Boolean(process.env.TELEGRAM_BOT_TOKEN) },
+    { t: 'Откройте первую смену', d: 'Касса → «Открыть смену». Дальше продажи пойдут в отчёты.', href: '/pos', done: x.sh > 0 },
+  ];
+
   return (
     <>
       <div className="phd">
@@ -57,6 +77,8 @@ export default async function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {can(u.role, 'settings') && <Guide steps={steps} video={st.helpVideo || ''} />}
 
       <div className="kpis">
         <div className="kpi">

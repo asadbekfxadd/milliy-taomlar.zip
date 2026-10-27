@@ -202,6 +202,9 @@ function Editor({ d, ings, recipes, priceAt, onSaved }: { d: Dish; ings: Ing[]; 
             </>
           )}
         </span>
+        <a className="b" href={`/admin/recipes/costing?dish=${d.id}`}>
+          Калькуляция
+        </a>
         <button
           className="b main"
           disabled={busy}

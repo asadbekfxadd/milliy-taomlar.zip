@@ -82,6 +82,8 @@ export type Settings = {
   happyHours?: HappyHour[];
   deals?: Deal[];
   loyalty?: LoyaltyCfg;
+  /** link to a how-to video for staff (YouTube etc.) */
+  helpVideo?: string;
 };
 export type CartItem = { key: string; id: string; si: number; ex: number[]; qty: number };
 export type KitchenState = 'queued' | 'cooking' | 'ready';

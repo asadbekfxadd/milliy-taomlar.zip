@@ -224,6 +224,18 @@ CREATE TABLE IF NOT EXISTS prep_recipes (
   lines      jsonb NOT NULL DEFAULT '[]',
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS expenses (
+  id         serial PRIMARY KEY,
+  day        date NOT NULL,
+  cat        text NOT NULL,
+  amount     bigint NOT NULL,
+  note       text NOT NULL DEFAULT '',
+  paid_from  text NOT NULL DEFAULT 'cash',
+  shift_id   integer,
+  by_name    text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS expenses_day_idx ON expenses (day);
 CREATE INDEX IF NOT EXISTS stock_moves_ing_idx ON stock_moves (ingredient_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS stock_moves_at_idx ON stock_moves (created_at DESC);
 CREATE TABLE IF NOT EXISTS recipes (

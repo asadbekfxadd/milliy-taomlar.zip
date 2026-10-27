@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
    the permission depends on what is being changed. */
 const FIELD_PERM: Record<string, Perm> = { promos: 'promos', catStations: 'menu', tables: 'tables', bookingEnabled: 'tables', bookingMaxGuests: 'tables', deals: 'promos', happyHours: 'promos', loyalty: 'promos' };
 const LABEL: Record<string, string> = {
-  promos: 'промокоды', catStations: 'цеха категорий', tables: 'число столов', servicePct: 'обслуживание %', printGuestChecks: 'печать чеков', bookingEnabled: 'бронь на сайте', deals: 'акции', happyHours: 'счастливые часы', loyalty: 'баллы', bookingMaxGuests: 'макс. гостей в брони',
+  promos: 'промокоды', catStations: 'цеха категорий', tables: 'число столов', servicePct: 'обслуживание %', printGuestChecks: 'печать чеков', bookingEnabled: 'бронь на сайте', helpVideo: 'видео-инструкция', deals: 'акции', happyHours: 'счастливые часы', loyalty: 'баллы', bookingMaxGuests: 'макс. гостей в брони',
   autoAcceptOnline: 'автоприём онлайн-заказов', ordersPaused: 'пауза онлайн-заказов', openFrom: 'часы приёма', openTo: 'часы приёма', closedDays: 'рабочие дни',
   zones: 'зоны доставки', pickup: 'самовывоз', delivery: 'доставка', pay: 'способы оплаты', paper: 'ширина ленты', prepMinutes: 'время готовки',
   deliveryMinutes: 'время доставки', story: 'история', storyPhotos: 'фото истории', name: 'название', phone: 'телефон', phone2: 'телефон 2', address: 'адрес',
