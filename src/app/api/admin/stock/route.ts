@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { guard } from '@/lib/auth';
 import { audit } from '@/lib/audit';
-import { countStock, createIngredient, listIngredients, listMoves, receive, UNITS, updateIngredient, writeOff } from '@/lib/stock';
+import { countStock, createIngredient, listIngredients, listMoves, listPreps, produce, receive, savePrep, turnover, UNITS, updateIngredient, writeOff } from '@/lib/stock';
 
 export const dynamic = 'force-dynamic';
 const bad = (error: string, status = 400) => NextResponse.json({ error }, { status });
@@ -11,8 +11,30 @@ const unit = z.enum(UNITS as unknown as [string, ...string[]]);
 const f = (n: number) => (Math.round(n * 1000) / 1000).toLocaleString('ru-RU');
 
 const schema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('create'), name: z.string().trim().min(2, 'Название слишком короткое').max(80), unit, min: z.coerce.number().min(0).default(0), stock: z.coerce.number().min(0).default(0), cost: z.coerce.number().min(0).default(0) }),
-  z.object({ action: z.literal('update'), id: z.string(), name: z.string().trim().min(2).max(80).optional(), unit: unit.optional(), min: z.coerce.number().min(0).optional(), active: z.boolean().optional() }),
+  z.object({
+    action: z.literal('create'),
+    name: z.string().trim().min(2, 'Название слишком короткое').max(80),
+    unit,
+    min: z.coerce.number().min(0).default(0),
+    stock: z.coerce.number().min(0).default(0),
+    cost: z.coerce.number().min(0).default(0),
+    isPrep: z.boolean().default(false),
+  }),
+  z.object({
+    action: z.literal('update'),
+    id: z.string(),
+    name: z.string().trim().min(2).max(80).optional(),
+    unit: unit.optional(),
+    min: z.coerce.number().min(0).optional(),
+    active: z.boolean().optional(),
+    yield: z.coerce.number().min(1, 'Выход от 1 до 100%').max(100, 'Выход от 1 до 100%').optional(),
+    par: z.coerce.number().min(0).optional(),
+    supplierId: z.string().max(40).optional(),
+    packs: z.array(z.object({ name: z.string().trim().min(1).max(30), k: z.coerce.number().positive().max(100000) })).max(6).optional(),
+    isPrep: z.boolean().optional(),
+  }),
+  z.object({ action: z.literal('prep'), ing: z.string(), out: qty, lines: z.array(z.object({ ing: z.string(), qty: z.coerce.number().min(0).max(1_000_000) })).max(40) }),
+  z.object({ action: z.literal('produce'), ing: z.string(), planned: qty, actual: qty }),
   z.object({ action: z.literal('receive'), note: z.string().trim().max(160).default(''), lines: z.array(z.object({ ing: z.string(), qty, price: z.coerce.number().min(0).max(100_000_000) })).min(1).max(100) }),
   z.object({ action: z.literal('writeoff'), ing: z.string(), qty, note: z.string().trim().min(2, 'Укажите причину').max(160) }),
   z.object({ action: z.literal('count'), note: z.string().trim().max(160).default(''), lines: z.array(z.object({ ing: z.string(), actual: z.coerce.number().min(0).max(1_000_000) })).min(1).max(1000) }),
@@ -22,6 +44,13 @@ export async function GET(req: Request) {
   const g = await guard('stock');
   if ('res' in g) return g.res;
   const sp = new URL(req.url).searchParams;
+  if (sp.get('part') === 'turnover') {
+    const ok = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+    const to = ok(sp.get('to')) || new Date().toISOString().slice(0, 10);
+    const from = ok(sp.get('from')) || to.slice(0, 8) + '01';
+    return NextResponse.json({ from, to, rows: await turnover(from, to) });
+  }
+  if (sp.get('part') === 'preps') return NextResponse.json({ preps: await listPreps(), ings: await listIngredients() });
   const [ings, moves] = await Promise.all([listIngredients(true), listMoves({ ing: sp.get('ing') || undefined, kind: sp.get('kind') || undefined, days: Number(sp.get('days')) || 30, limit: 400 })]);
   return NextResponse.json({ ings, moves });
 }
@@ -37,7 +66,7 @@ export async function POST(req: Request) {
   switch (d.action) {
     case 'create': {
       if ([...ings.values()].some((i) => i.name.toLowerCase() === d.name.toLowerCase())) return bad('Такой продукт уже есть');
-      const id = await createIngredient({ name: d.name, unit: d.unit, min: d.min, cost: d.cost });
+      const id = await createIngredient({ name: d.name, unit: d.unit, min: d.min, cost: d.cost, isPrep: d.isPrep });
       if (d.stock > 0) await receive(id, d.stock, d.cost, 'начальный остаток', g.user.name);
       await audit(g.user, 'Склад: новый продукт', `${d.name}, ${d.unit}${d.stock ? `, остаток ${f(d.stock)}` : ''}`);
       return NextResponse.json({ id });
@@ -46,7 +75,22 @@ export async function POST(req: Request) {
       if (!ings.has(d.id)) return bad('Продукт не найден', 404);
       await updateIngredient(d.id, d);
       if (d.active === false) await audit(g.user, 'Склад: продукт скрыт', name(d.id));
+      if (d.yield !== undefined && d.yield !== ings.get(d.id)!.yield) await audit(g.user, 'Склад: выход изменён', `${name(d.id)}: ${ings.get(d.id)!.yield}% → ${d.yield}%`);
       return NextResponse.json({ ok: true });
+    }
+    case 'prep': {
+      if (!ings.has(d.ing)) return bad('Заготовка не найдена', 404);
+      for (const l of d.lines) if (!ings.has(l.ing)) return bad('В рецепте неизвестный продукт');
+      const err = await savePrep(d.ing, d.out, d.lines);
+      if (err) return bad(err);
+      await audit(g.user, 'Склад: рецепт заготовки', `${name(d.ing)}: ${d.lines.length} продуктов → ${f(d.out)} ${ings.get(d.ing)!.unit}`);
+      return NextResponse.json({ ok: true });
+    }
+    case 'produce': {
+      const r = await produce(d.ing, d.planned, d.actual, g.user.name);
+      if ('error' in r) return bad(r.error!);
+      await audit(g.user, 'Склад: акт приготовления', `${name(d.ing)} ${f(d.actual)} ${ings.get(d.ing)?.unit}, себестоимость ${f(Math.round(r.unit))} сум за ед.`);
+      return NextResponse.json(r);
     }
     case 'receive': {
       for (const l of d.lines) if (!ings.has(l.ing)) return bad('В накладной неизвестный продукт');

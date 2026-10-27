@@ -3,7 +3,9 @@ import { useMemo, useState } from 'react';
 import type { Dish, Menu } from '@/lib/types';
 import { api, money, PageHead, qtyFmt, usePanel } from './kit';
 
-type Ing = { id: string; name: string; unit: string; cost: number };
+type Ing = { id: string; name: string; unit: string; cost: number; yield?: number; isPrep?: boolean };
+/** gross amount from stock for a net amount in the recipe */
+const grossOf = (qty: number, i?: Ing) => qty / ((i?.yield || 100) / 100);
 type Line = { ing: string; qty: number };
 type Recipe = { dishId: string; si: number; lines: Line[] };
 
@@ -15,7 +17,7 @@ export default function Recipes({ menu, ings, initial }: { menu: Menu; ings: Ing
   const [f, setF] = useState<'all' | 'none' | 'high'>('all');
   const [qs, setQs] = useState('');
   const im = useMemo(() => new Map(ings.map((i) => [i.id, i])), [ings]);
-  const costOf = (r?: Recipe | null) => (r ? r.lines.reduce((s, l) => s + l.qty * (im.get(l.ing)?.cost || 0), 0) : null);
+  const costOf = (r?: Recipe | null) => (r ? r.lines.reduce((s, l) => s + grossOf(l.qty, im.get(l.ing)) * (im.get(l.ing)?.cost || 0), 0) : null);
   const recipeFor = (d: Dish, si: number) => recipes.find((r) => r.dishId === d.id && r.si === si) || (si >= 0 ? recipes.find((r) => r.dishId === d.id && r.si === -1) : undefined);
   const priceAt = (d: Dish, si: number) => (d.sizes.length ? d.sizes[Math.max(0, si)]?.p || 0 : d.price);
   const rows = menu.dishes
@@ -112,7 +114,7 @@ function Editor({ d, ings, recipes, priceAt, onSaved }: { d: Dish; ings: Ing[]; 
   const [busy, setBusy] = useState(false);
   const { toast } = usePanel();
   const im = new Map(ings.map((i) => [i.id, i]));
-  const cost = lines.reduce((s, l) => s + n(l.qty) * (im.get(l.ing)?.cost || 0), 0);
+  const cost = lines.reduce((s, l) => s + grossOf(n(l.qty), im.get(l.ing)) * (im.get(l.ing)?.cost || 0), 0);
   const price = priceAt(si);
   function toRows(r?: Recipe) {
     const base = (r?.lines || []).map((l) => ({ ing: l.ing, qty: String(l.qty) }));
@@ -160,6 +162,7 @@ function Editor({ d, ings, recipes, priceAt, onSaved }: { d: Dish; ings: Ing[]; 
                     {ings.map((x) => (
                       <option key={x.id} value={x.id}>
                         {x.name}, {x.unit}
+                        {x.isPrep ? ' · заготовка' : ''}
                       </option>
                     ))}
                   </select>
@@ -169,9 +172,14 @@ function Editor({ d, ings, recipes, priceAt, onSaved }: { d: Dish; ings: Ing[]; 
                     <input className="ip sm num" style={{ width: 100 }} inputMode="decimal" value={l.qty} onChange={(e) => set({ qty: e.target.value })} aria-label="Количество" disabled={!l.ing} placeholder={i?.unit === 'кг' || i?.unit === 'л' ? '0,25' : '1'} />
                     <span className="muted">{i?.unit}</span>
                   </div>
-                  {i && (i.unit === 'кг' || i.unit === 'л') && n(l.qty) > 0 && <small className="muted">= {qtyFmt(n(l.qty) * 1000)} {i.unit === 'кг' ? 'г' : 'мл'}</small>}
+                  {i && (i.unit === 'кг' || i.unit === 'л') && n(l.qty) > 0 && <small className="muted">= {qtyFmt(n(l.qty) * 1000)} {i.unit === 'кг' ? 'г' : 'мл'} чистыми</small>}
+                  {i && (i.yield || 100) < 100 && n(l.qty) > 0 && (
+                    <small className="muted" style={{ display: 'block' }}>
+                      со склада {qtyFmt(grossOf(n(l.qty), i))} {i.unit} (выход {i.yield}%)
+                    </small>
+                  )}
                 </td>
-                <td className="r num">{i && n(l.qty) ? money(n(l.qty) * i.cost) : ''}</td>
+                <td className="r num">{i && n(l.qty) ? money(grossOf(n(l.qty), i) * i.cost) : ''}</td>
                 <td className="r">
                   {l.ing && (
                     <button className="lnk red" onClick={() => setLines(lines.filter((_, j) => j !== k))}>

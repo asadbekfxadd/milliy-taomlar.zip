@@ -2,27 +2,37 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api, money, PageHead, qtyFmt, usePanel, when } from './kit';
+import { Preps, Purchases, Turnover } from './StockMore';
 
-type Ing = { id: string; name: string; unit: string; stock: number; min: number; cost: number; active: boolean };
+export type Pack = { name: string; k: number };
+export type Ing = { id: string; name: string; unit: string; stock: number; min: number; cost: number; active: boolean; yield: number; par: number; supplierId: string; packs: Pack[]; isPrep: boolean };
+export type Supplier = { id: string; name: string; phone: string; note: string; active: boolean };
 type Move = { id: number; name: string; unit: string; kind: string; qty: number; price: number; note: string; by: string; at: string };
 const UNITS = ['кг', 'л', 'шт', 'пачка', 'бутылка'];
-const MOVE_RU: Record<string, string> = { in: 'Приход', writeoff: 'Списание', adjust: 'Инвентаризация', sale: 'Продажа', return: 'Возврат продажи' };
-const n = (v: string) => Number(v.replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+const MOVE_RU: Record<string, string> = { in: 'Приход', writeoff: 'Списание', adjust: 'Инвентаризация', sale: 'Продажа', return: 'Возврат продажи', prod_out: 'На заготовку', prod_in: 'Заготовка' };
+export const n = (v: string) => Number(v.replace(',', '.').replace(/[^\d.]/g, '')) || 0;
 
 const TABS: [string, string][] = [
   ['left', 'Остатки'],
   ['in', 'Приход'],
+  ['buy', 'Закупки и поставщики'],
+  ['prep', 'Заготовки'],
   ['off', 'Списание'],
   ['count', 'Инвентаризация'],
+  ['turn', 'Оборотка'],
   ['log', 'История'],
 ];
 
-export default function Stock({ initial }: { initial: Ing[] }) {
+export default function Stock({ initial, suppliers: sups0 }: { initial: Ing[]; suppliers: Supplier[] }) {
   const sp = useSearchParams();
   const [tab, setTab] = useState('left');
   const [ings, setIngs] = useState(initial);
+  const [suppliers, setSuppliers] = useState(sups0);
   const { toast } = usePanel();
-  const reload = useCallback(async () => setIngs((await api('/api/admin/stock?days=1')).ings), []);
+  const reload = useCallback(async () => {
+    setIngs((await api('/api/admin/stock?days=1')).ings);
+    setSuppliers((await api('/api/admin/purchases')).suppliers);
+  }, []);
   const post = async (body: Record<string, unknown>, ok: string) => {
     try {
       await api('/api/admin/stock', 'POST', body);
@@ -40,7 +50,7 @@ export default function Stock({ initial }: { initial: Ing[] }) {
 
   return (
     <>
-      <PageHead title="Склад" sub="Продукты и их остатки. Продажи списываются сами по техкартам, когда чек закрыт. Приход, списание и пересчёт — здесь." />
+      <PageHead title="Склад" sub="Продукты, закупки у поставщиков, заготовки и оборотка. Продажи списываются сами по техкартам (с учётом выхода после обработки), когда чек закрыт." />
       <div className="kpis">
         <div className="kpi">
           <span>Продуктов</span>
@@ -64,8 +74,11 @@ export default function Stock({ initial }: { initial: Ing[] }) {
           </button>
         ))}
       </div>
-      {tab === 'left' && <Left ings={ings} onlyLow={sp.get('f') === 'low'} post={post} />}
+      {tab === 'left' && <Left ings={ings} suppliers={suppliers} onlyLow={sp.get('f') === 'low'} post={post} />}
       {tab === 'in' && <Receive ings={active} post={post} />}
+      {tab === 'buy' && <Purchases onChanged={reload} />}
+      {tab === 'prep' && <Preps ings={active} onChanged={reload} />}
+      {tab === 'turn' && <Turnover />}
       {tab === 'off' && <WriteOff ings={active} post={post} />}
       {tab === 'count' && <Count ings={active} post={post} />}
       {tab === 'log' && <Log />}
@@ -75,7 +88,7 @@ export default function Stock({ initial }: { initial: Ing[] }) {
 
 type Post = (b: Record<string, unknown>, ok: string) => Promise<boolean>;
 
-function Left({ ings, onlyLow, post }: { ings: Ing[]; onlyLow: boolean; post: Post }) {
+function Left({ ings, suppliers, onlyLow, post }: { ings: Ing[]; suppliers: Supplier[]; onlyLow: boolean; post: Post }) {
   const [qs, setQs] = useState('');
   const [low, setLow] = useState(onlyLow);
   const [hidden, setHidden] = useState(false);
@@ -85,6 +98,7 @@ function Left({ ings, onlyLow, post }: { ings: Ing[]; onlyLow: boolean; post: Po
   return (
     <>
       {adding && <NewIng post={post} onDone={() => setAdding(false)} />}
+      {edit && ings.find((i) => i.id === edit) && <IngCard i={ings.find((i) => i.id === edit)!} suppliers={suppliers} post={post} onDone={() => setEdit(null)} />}
       <div className="box">
         <div className="sx-row" style={{ marginBottom: 12 }}>
           <input className="ip sm" style={{ flex: '1 1 200px', width: 'auto' }} placeholder="Найти продукт" value={qs} onChange={(e) => setQs(e.target.value)} />
@@ -114,14 +128,13 @@ function Left({ ings, onlyLow, post }: { ings: Ing[]; onlyLow: boolean; post: Po
                 </tr>
               </thead>
               <tbody>
-                {shown.map((i) =>
-                  edit === i.id ? (
-                    <EditRow key={i.id} i={i} post={post} onDone={() => setEdit(null)} />
-                  ) : (
+                {shown.map((i) => (
                     <tr key={i.id} className={i.stock <= 0 ? 'out' : i.min > 0 && i.stock <= i.min ? 'low' : ''}>
                       <td>
                         <b>{i.name}</b>
                         {i.stock <= 0 ? <span className="bd bad" style={{ marginLeft: 6 }}>нет</span> : i.min > 0 && i.stock <= i.min ? <span className="bd new" style={{ marginLeft: 6 }}>мало</span> : null}
+                        {i.isPrep && <span className="bd info" style={{ marginLeft: 6 }}>заготовка</span>}
+                        {i.yield < 100 && <div className="muted small">выход {i.yield}%</div>}
                       </td>
                       <td className="r num">
                         <b>{qtyFmt(i.stock)}</b> {i.unit}
@@ -135,8 +148,7 @@ function Left({ ings, onlyLow, post }: { ings: Ing[]; onlyLow: boolean; post: Po
                         </button>
                       </td>
                     </tr>
-                  ),
-                )}
+                ))}
               </tbody>
             </table>
           </div>
@@ -151,39 +163,112 @@ function Left({ ings, onlyLow, post }: { ings: Ing[]; onlyLow: boolean; post: Po
   );
 }
 
-function EditRow({ i, post, onDone }: { i: Ing; post: Post; onDone: () => void }) {
-  const [name, setName] = useState(i.name);
-  const [unit, setUnit] = useState(i.unit);
-  const [min, setMin] = useState(String(i.min || ''));
+function IngCard({ i, suppliers, post, onDone }: { i: Ing; suppliers: Supplier[]; post: Post; onDone: () => void }) {
+  const [f, setF] = useState({ name: i.name, unit: i.unit, min: String(i.min || ''), par: String(i.par || ''), yield: String(i.yield || 100), supplierId: i.supplierId, isPrep: i.isPrep });
+  const [packs, setPacks] = useState<{ name: string; k: string }[]>(i.packs.map((p) => ({ name: p.name, k: String(p.k) })));
+  const set = (p: Partial<typeof f>) => setF({ ...f, ...p });
+  const y = n(f.yield) || 100;
   return (
-    <tr>
-      <td>
-        <input className="ip sm" value={name} onChange={(e) => setName(e.target.value)} aria-label="Название" />
-      </td>
-      <td className="r">
-        <select className="ip sm" style={{ width: 'auto' }} value={unit} onChange={(e) => setUnit(e.target.value)} aria-label="Единица">
-          {UNITS.map((u) => (
-            <option key={u}>{u}</option>
-          ))}
-        </select>
-      </td>
-      <td className="r">
-        <input className="ip sm num" style={{ width: 90 }} inputMode="decimal" value={min} onChange={(e) => setMin(e.target.value)} aria-label="Минимум" placeholder="минимум" />
-      </td>
-      <td colSpan={3} className="r">
-        <div className="sx-row" style={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
-          <button className="b sm main" onClick={async () => (await post({ action: 'update', id: i.id, name, unit, min: n(min) }, 'Сохранено')) && onDone()}>
+    <div className="sx-modal" role="dialog" aria-modal="true" aria-label={i.name}>
+      <div className="sx-scrim" onClick={onDone} />
+      <div className="sx-sheet">
+        <h3>{i.name}</h3>
+        <div className="grid-f">
+          <label className="f">
+            <span>Название</span>
+            <input className="ip" value={f.name} onChange={(e) => set({ name: e.target.value })} />
+          </label>
+          <label className="f">
+            <span>Единица учёта</span>
+            <select className="ip" value={f.unit} onChange={(e) => set({ unit: e.target.value })}>
+              {UNITS.map((u) => (
+                <option key={u}>{u}</option>
+              ))}
+            </select>
+          </label>
+          <label className="f">
+            <span>Минимум (предупредить), {f.unit}</span>
+            <input className="ip num" inputMode="decimal" value={f.min} onChange={(e) => set({ min: e.target.value })} />
+          </label>
+          <label className="f">
+            <span>Заказывать до, {f.unit}</span>
+            <input className="ip num" inputMode="decimal" value={f.par} onChange={(e) => set({ par: e.target.value })} placeholder="пусто — вдвое больше минимума" />
+            <small>Автозаказ дополнит остаток до этого количества.</small>
+          </label>
+          <label className="f">
+            <span>Выход после обработки, %</span>
+            <input className="ip num" inputMode="decimal" value={f.yield} onChange={(e) => set({ yield: e.target.value })} />
+            <small>{y < 100 ? `Из 1 ${f.unit} остаётся ${qtyFmt(y / 100)} ${f.unit}. В техкарте пишите чистый вес, со склада уйдёт в ${qtyFmt(100 / y)} раза больше.` : 'Потерь нет. Для мяса с костью, овощей с очисткой укажите, например, 70.'}</small>
+          </label>
+          <label className="f">
+            <span>Поставщик по умолчанию</span>
+            <select className="ip" value={f.supplierId} onChange={(e) => set({ supplierId: e.target.value })}>
+              <option value="">— не выбран —</option>
+              {suppliers
+                .filter((x) => x.active || x.id === f.supplierId)
+                .map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <div className="f full">
+            <span>Упаковки при закупке</span>
+            {packs.map((p, k) => (
+              <div className="sx-row" key={k}>
+                <input className="ip sm" style={{ width: 130 }} placeholder="мешок, ящик" value={p.name} onChange={(e) => setPacks(packs.map((x, j) => (j === k ? { ...x, name: e.target.value } : x)))} />
+                <span className="muted">=</span>
+                <input className="ip sm num" style={{ width: 90 }} inputMode="decimal" value={p.k} onChange={(e) => setPacks(packs.map((x, j) => (j === k ? { ...x, k: e.target.value } : x)))} />
+                <span className="muted">{f.unit}</span>
+                <button className="lnk red" onClick={() => setPacks(packs.filter((_, j) => j !== k))}>
+                  убрать
+                </button>
+              </div>
+            ))}
+            <button className="lnk" style={{ alignSelf: 'flex-start' }} onClick={() => setPacks([...packs, { name: '', k: '' }])}>
+              + упаковка
+            </button>
+            <small>Например «мешок = 50 кг», «ящик = 12 шт». В приходе можно указать количество в упаковках — пересчитается само.</small>
+          </div>
+          <label className="f full" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <input type="checkbox" checked={f.isPrep} onChange={(e) => set({ isPrep: e.target.checked })} />
+            <span>Заготовка (готовим сами из других продуктов: тесто, соус, бульон)</span>
+          </label>
+        </div>
+        <div className="sx-row">
+          <button
+            className="b main"
+            disabled={f.name.trim().length < 2}
+            onClick={async () =>
+              (await post(
+                {
+                  action: 'update',
+                  id: i.id,
+                  name: f.name,
+                  unit: f.unit,
+                  min: n(f.min),
+                  par: n(f.par),
+                  yield: Math.min(100, Math.max(1, y)),
+                  supplierId: f.supplierId,
+                  isPrep: f.isPrep,
+                  packs: packs.filter((p) => p.name.trim() && n(p.k) > 0).map((p) => ({ name: p.name.trim(), k: n(p.k) })),
+                },
+                'Сохранено',
+              )) && onDone()
+            }
+          >
             Сохранить
           </button>
-          <button className="b sm" onClick={onDone}>
+          <button className="b" onClick={onDone}>
             Отмена
           </button>
           <button className="lnk red" onClick={async () => (await post({ action: 'update', id: i.id, active: !i.active }, i.active ? 'Продукт скрыт' : 'Продукт снова в списке')) && onDone()}>
-            {i.active ? 'Скрыть' : 'Вернуть'}
+            {i.active ? 'Скрыть продукт' : 'Вернуть в список'}
           </button>
         </div>
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
 
@@ -193,12 +278,13 @@ function NewIng({ post, onDone }: { post: Post; onDone: () => void }) {
   const [stock, setStock] = useState('');
   const [cost, setCost] = useState('');
   const [min, setMin] = useState('');
+  const [prep, setPrep] = useState(false);
   return (
     <form
       className="box"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (await post({ action: 'create', name, unit, stock: n(stock), cost: n(cost), min: n(min) }, `«${name}» добавлен`)) {
+        if (await post({ action: 'create', name, unit, stock: n(stock), cost: n(cost), min: n(min), isPrep: prep }, `«${name}» добавлен`)) {
           setName('');
           setStock('');
           setCost('');
@@ -232,6 +318,10 @@ function NewIng({ post, onDone }: { post: Post; onDone: () => void }) {
           <span>Предупреждать, когда меньше</span>
           <input className="ip num" inputMode="decimal" value={min} onChange={(e) => setMin(e.target.value)} placeholder={`например 5 ${unit}`} />
         </label>
+        <label className="f" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <input type="checkbox" checked={prep} onChange={(e) => setPrep(e.target.checked)} />
+          <span>Это заготовка (тесто, соус, бульон)</span>
+        </label>
       </div>
       <div className="sx-row" style={{ marginTop: 12 }}>
         <button className="b main" disabled={name.trim().length < 2}>
@@ -258,13 +348,37 @@ function IngSelect({ ings, value, onChange }: { ings: Ing[]; value: string; onCh
   );
 }
 
+/** "Баранина 12,5 85000" or Excel columns (name, qty, price) → rows; names are matched to products. */
+export function parsePaste(text: string, ings: Ing[]) {
+  const norm = (x: string) => x.toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9ʻ' ]/gi, ' ').replace(/\s+/g, ' ').trim();
+  const out: { ing: string; qty: string; price: string; raw: string }[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const cells = line.includes('\t') ? line.split('\t').map((c) => c.trim()) : (() => {
+      const m = line.match(/^(.*?)[\s;]+([\d.,]+)\s*(?:[a-zа-я.]*\s*)?[\s;]*([\d\s.,]*)$/i);
+      return m ? [m[1], m[2], m[3]] : [line];
+    })();
+    const name = norm(cells[0] || '');
+    if (!name) continue;
+    const nums = cells.slice(1).map((c) => c.replace(/\s/g, '')).filter((c) => /\d/.test(c));
+    const exact = ings.find((i) => norm(i.name) === name);
+    const part = exact || ings.find((i) => norm(i.name).startsWith(name) || name.startsWith(norm(i.name))) || ings.find((i) => norm(i.name).includes(name) || name.includes(norm(i.name).split(' ')[0]));
+    out.push({ ing: part?.id || '', qty: nums[0] || '', price: nums[1] ? String(n(nums[1])) : '', raw: cells[0] });
+  }
+  return out;
+}
+
 function Receive({ ings, post }: { ings: Ing[]; post: Post }) {
-  const blank = () => ({ ing: '', qty: '', price: '' });
+  const blank = () => ({ ing: '', qty: '', price: '', pack: -1, raw: '' });
   const [rows, setRows] = useState([blank(), blank(), blank()]);
   const [note, setNote] = useState('');
+  const [paste, setPaste] = useState<string | null>(null);
   const map = useMemo(() => new Map(ings.map((i) => [i.id, i])), [ings]);
+  // quantities in packs are converted to the product's unit
+  const kOf = (r: { ing: string; pack: number }) => (r.pack >= 0 ? map.get(r.ing)?.packs[r.pack]?.k || 1 : 1);
   const valid = rows.filter((r) => r.ing && n(r.qty) > 0);
-  const total = valid.reduce((s, r) => s + n(r.qty) * n(r.price), 0);
+  const total = valid.reduce((s, r) => s + n(r.qty) * kOf(r) * n(r.price), 0);
   if (!ings.length) return <div className="box empty">Сначала добавьте продукты во вкладке «Остатки».</div>;
   return (
     <div className="box">
@@ -274,13 +388,39 @@ function Receive({ ings, post }: { ings: Ing[]; post: Post }) {
         <span>Поставщик или номер накладной</span>
         <input className="ip" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Рынок, мясник Бахтиёр, накладная 125" />
       </label>
+      {paste === null ? (
+        <button className="b sm" style={{ marginBottom: 12 }} onClick={() => setPaste('')}>
+          Вставить из Excel или накладной
+        </button>
+      ) : (
+        <div className="f" style={{ marginBottom: 12 }}>
+          <span>Скопируйте строки из Excel (название, количество, цена) или напишите построчно: «Баранина 12,5 85000»</span>
+          <textarea className="ip" rows={5} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={'Баранина\t12,5\t85000\nЛук\t20\t4000'} />
+          <div className="sx-row">
+            <button
+              className="b sm main"
+              disabled={!paste.trim()}
+              onClick={() => {
+                const got = parsePaste(paste, ings).map((x) => ({ ...x, pack: -1, price: x.price || (x.ing && map.get(x.ing)?.cost ? String(Math.round(map.get(x.ing)!.cost)) : '') }));
+                setRows([...rows.filter((r) => r.ing), ...got, blank()]);
+                setPaste(null);
+              }}
+            >
+              Разобрать
+            </button>
+            <button className="b sm" onClick={() => setPaste(null)}>
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
       <div className="tbl-wrap">
         <table className="tbl">
           <thead>
             <tr>
               <th>Продукт</th>
               <th>Количество</th>
-              <th>Цена за ед.</th>
+              <th>Цена за ед. учёта</th>
               <th className="r">Сумма</th>
               <th />
             </tr>
@@ -292,18 +432,35 @@ function Receive({ ings, post }: { ings: Ing[]; post: Post }) {
               return (
                 <tr key={k}>
                   <td style={{ minWidth: 200 }}>
-                    <IngSelect ings={ings} value={r.ing} onChange={(v) => set({ ing: v, price: r.price || (map.get(v)?.cost ? String(Math.round(map.get(v)!.cost)) : '') })} />
+                    <IngSelect ings={ings} value={r.ing} onChange={(v) => set({ ing: v, pack: -1, price: r.price || (map.get(v)?.cost ? String(Math.round(map.get(v)!.cost)) : '') })} />
+                    {r.raw && !r.ing && <small className="er">не нашли «{r.raw}» — выберите продукт</small>}
                   </td>
                   <td>
                     <div className="sx-row" style={{ flexWrap: 'nowrap', gap: 6 }}>
-                      <input className="ip sm num" style={{ width: 100 }} inputMode="decimal" value={r.qty} onChange={(e) => set({ qty: e.target.value })} aria-label="Количество" />
-                      <span className="muted">{i?.unit}</span>
+                      <input className="ip sm num" style={{ width: 90 }} inputMode="decimal" value={r.qty} onChange={(e) => set({ qty: e.target.value })} aria-label="Количество" />
+                      {i && i.packs.length > 0 ? (
+                        <select className="ip sm" style={{ width: 'auto' }} value={r.pack} onChange={(e) => set({ pack: Number(e.target.value) })} aria-label="Единица">
+                          <option value={-1}>{i.unit}</option>
+                          {i.packs.map((p, j) => (
+                            <option key={j} value={j}>
+                              {p.name} ({qtyFmt(p.k)} {i.unit})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="muted">{i?.unit}</span>
+                      )}
                     </div>
+                    {r.pack >= 0 && n(r.qty) > 0 && i && (
+                      <small className="muted">
+                        = {qtyFmt(n(r.qty) * kOf(r))} {i.unit}
+                      </small>
+                    )}
                   </td>
                   <td>
                     <input className="ip sm num" style={{ width: 120 }} inputMode="numeric" value={r.price} onChange={(e) => set({ price: e.target.value })} aria-label="Цена" />
                   </td>
-                  <td className="r num">{n(r.qty) && n(r.price) ? money(n(r.qty) * n(r.price)) : '—'}</td>
+                  <td className="r num">{n(r.qty) && n(r.price) ? money(n(r.qty) * kOf(r) * n(r.price)) : '—'}</td>
                   <td className="r">
                     <button className="lnk red" onClick={() => setRows(rows.length > 1 ? rows.filter((_, j) => j !== k) : [blank()])}>
                       убрать
@@ -325,7 +482,7 @@ function Receive({ ings, post }: { ings: Ing[]; post: Post }) {
             className="b main"
             disabled={!valid.length}
             onClick={async () => {
-              if (await post({ action: 'receive', note, lines: valid.map((r) => ({ ing: r.ing, qty: n(r.qty), price: n(r.price) })) }, `Приход проведён: ${valid.length} поз.`)) {
+              if (await post({ action: 'receive', note, lines: valid.map((r) => ({ ing: r.ing, qty: +(n(r.qty) * kOf(r)).toFixed(3), price: n(r.price) })) }, `Приход проведён: ${valid.length} поз.`)) {
                 setRows([blank(), blank(), blank()]);
                 setNote('');
               }

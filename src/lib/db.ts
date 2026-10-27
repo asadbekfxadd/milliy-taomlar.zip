@@ -191,6 +191,39 @@ CREATE TABLE IF NOT EXISTS stock_moves (
   by_name       text NOT NULL DEFAULT '',
   created_at    timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS yield_pct   numeric NOT NULL DEFAULT 100;
+ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS par         numeric NOT NULL DEFAULT 0;
+ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS supplier_id text NOT NULL DEFAULT '';
+ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS packs       jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS is_prep     boolean NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS suppliers (
+  id         text PRIMARY KEY,
+  name       text NOT NULL,
+  phone      text NOT NULL DEFAULT '',
+  note       text NOT NULL DEFAULT '',
+  active     boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS purchases (
+  id          serial PRIMARY KEY,
+  supplier_id text NOT NULL DEFAULT '',
+  status      text NOT NULL DEFAULT 'draft',
+  note        text NOT NULL DEFAULT '',
+  lines       jsonb NOT NULL DEFAULT '[]',
+  total       numeric NOT NULL DEFAULT 0,
+  paid        boolean NOT NULL DEFAULT false,
+  created_by  text NOT NULL DEFAULT '',
+  received_by text NOT NULL DEFAULT '',
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  ordered_at  timestamptz,
+  received_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS prep_recipes (
+  ing_id     text PRIMARY KEY,
+  out_qty    numeric NOT NULL DEFAULT 1,
+  lines      jsonb NOT NULL DEFAULT '[]',
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 CREATE INDEX IF NOT EXISTS stock_moves_ing_idx ON stock_moves (ingredient_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS stock_moves_at_idx ON stock_moves (created_at DESC);
 CREATE TABLE IF NOT EXISTS recipes (
