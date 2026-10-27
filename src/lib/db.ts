@@ -1,6 +1,6 @@
-import 'server-only';
-import { Pool, type QueryResultRow } from 'pg';
-import { randomBytes } from 'crypto';
+import "server-only";
+import { Pool, type QueryResultRow } from "pg";
+import { randomBytes } from "crypto";
 
 /* Plain PostgreSQL via node-postgres. The schema is created automatically on first use
    (idempotent), so a fresh Railway Postgres needs no manual migration step. */
@@ -10,9 +10,13 @@ const g = globalThis as unknown as { pgPool?: Pool; pgReady?: Promise<void> };
 function pool() {
   if (!g.pgPool) {
     const url = process.env.DATABASE_URL;
-    if (!url) throw new Error('DATABASE_URL is not set');
+    if (!url) throw new Error("DATABASE_URL is not set");
     const local = /localhost|127\.0\.0\.1|\.railway\.internal/.test(url);
-    g.pgPool = new Pool({ connectionString: url, max: 8, ssl: local ? undefined : { rejectUnauthorized: false } });
+    g.pgPool = new Pool({
+      connectionString: url,
+      max: 8,
+      ssl: local ? undefined : { rejectUnauthorized: false },
+    });
   }
   return g.pgPool;
 }
@@ -175,7 +179,25 @@ CREATE TABLE IF NOT EXISTS customer_notes (
   phone      text PRIMARY KEY,
   note       text NOT NULL DEFAULT '',
   updated_at timestamptz NOT NULL DEFAULT now()
-);`;
+);
+CREATE TABLE IF NOT EXISTS reservations (
+  id         serial PRIMARY KEY,
+  token      text NOT NULL UNIQUE,
+  day        date NOT NULL,
+  time       text NOT NULL,
+  guests     int NOT NULL DEFAULT 2,
+  name       text NOT NULL,
+  phone      text NOT NULL,
+  note       text NOT NULL DEFAULT '',
+  table_no   int,
+  status     text NOT NULL DEFAULT 'new',
+  source     text NOT NULL DEFAULT 'site',
+  lang       text NOT NULL DEFAULT 'ru',
+  by_name    text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS reservations_day_idx ON reservations (day, time);`;
 
 function ready() {
   if (!g.pgReady)
@@ -189,49 +211,123 @@ function ready() {
   return g.pgReady;
 }
 
-export async function q<T extends QueryResultRow = any>(text: string, params: unknown[] = []) {
+export async function q<T extends QueryResultRow = any>(
+  text: string,
+  params: unknown[] = [],
+) {
   await ready();
   return pool().query<T>(text, params);
 }
 
-export const newId = () => randomBytes(12).toString('hex');
+export const newId = () => randomBytes(12).toString("hex");
 
 /* ---------- orders ---------- */
 export type OrderRow = {
-  id: string; no: number; token: string; status: string; type: string; zone: string; fee: number; address: string;
-  name: string; phone: string; note: string; when: string; pay: string; items: any; subtotal: number; total: number;
-  tgMessageId: number | null; createdAt: string;
-  source: string; tableNo: number | null; guests: number; waiter: string; service: number; paidWith: string; paidAt: string | null;
-  payStatus: string; acceptedAt: string | null; etaAt: string | null; customerChat: number | null;
-  promo: string; promoPct: number; promoFixed: number; discount: number; lang: string;
-  waiterId: string; tips: number; cashier: string; shiftId: number | null; cancelReason: string;
+  id: string;
+  no: number;
+  token: string;
+  status: string;
+  type: string;
+  zone: string;
+  fee: number;
+  address: string;
+  name: string;
+  phone: string;
+  note: string;
+  when: string;
+  pay: string;
+  items: any;
+  subtotal: number;
+  total: number;
+  tgMessageId: number | null;
+  createdAt: string;
+  source: string;
+  tableNo: number | null;
+  guests: number;
+  waiter: string;
+  service: number;
+  paidWith: string;
+  paidAt: string | null;
+  payStatus: string;
+  acceptedAt: string | null;
+  etaAt: string | null;
+  customerChat: number | null;
+  promo: string;
+  promoPct: number;
+  promoFixed: number;
+  discount: number;
+  lang: string;
+  waiterId: string;
+  tips: number;
+  cashier: string;
+  shiftId: number | null;
+  cancelReason: string;
 };
 export const mapOrder = (r: any): OrderRow => ({
-  id: r.id, no: r.no, token: r.token, status: r.status, type: r.type, zone: r.zone, fee: r.fee, address: r.address,
-  name: r.name, phone: r.phone, note: r.note, when: r.when, pay: r.pay, items: r.items, subtotal: r.subtotal, total: r.total,
-  tgMessageId: r.tg_message_id === null || r.tg_message_id === undefined ? null : Number(r.tg_message_id), createdAt: new Date(r.created_at).toISOString(),
-  source: r.source ?? 'site', tableNo: r.table_no ?? null, guests: r.guests ?? 0, waiter: r.waiter ?? '', service: r.service ?? 0,
-  paidWith: r.paid_with ?? '', paidAt: r.paid_at ? new Date(r.paid_at).toISOString() : null,
-  payStatus: r.pay_status ?? 'unpaid', acceptedAt: r.accepted_at ? new Date(r.accepted_at).toISOString() : null,
-  etaAt: r.eta_at ? new Date(r.eta_at).toISOString() : null, customerChat: r.customer_chat ? Number(r.customer_chat) : null,
-  promo: r.promo ?? '', promoPct: Number(r.promo_pct ?? 0), promoFixed: r.promo_fixed ?? 0, discount: r.discount ?? 0, lang: r.lang ?? 'ru',
-  waiterId: r.waiter_id ?? '', tips: r.tips ?? 0, cashier: r.cashier ?? '', shiftId: r.shift_id ?? null, cancelReason: r.cancel_reason ?? '',
+  id: r.id,
+  no: r.no,
+  token: r.token,
+  status: r.status,
+  type: r.type,
+  zone: r.zone,
+  fee: r.fee,
+  address: r.address,
+  name: r.name,
+  phone: r.phone,
+  note: r.note,
+  when: r.when,
+  pay: r.pay,
+  items: r.items,
+  subtotal: r.subtotal,
+  total: r.total,
+  tgMessageId:
+    r.tg_message_id === null || r.tg_message_id === undefined
+      ? null
+      : Number(r.tg_message_id),
+  createdAt: new Date(r.created_at).toISOString(),
+  source: r.source ?? "site",
+  tableNo: r.table_no ?? null,
+  guests: r.guests ?? 0,
+  waiter: r.waiter ?? "",
+  service: r.service ?? 0,
+  paidWith: r.paid_with ?? "",
+  paidAt: r.paid_at ? new Date(r.paid_at).toISOString() : null,
+  payStatus: r.pay_status ?? "unpaid",
+  acceptedAt: r.accepted_at ? new Date(r.accepted_at).toISOString() : null,
+  etaAt: r.eta_at ? new Date(r.eta_at).toISOString() : null,
+  customerChat: r.customer_chat ? Number(r.customer_chat) : null,
+  promo: r.promo ?? "",
+  promoPct: Number(r.promo_pct ?? 0),
+  promoFixed: r.promo_fixed ?? 0,
+  discount: r.discount ?? 0,
+  lang: r.lang ?? "ru",
+  waiterId: r.waiter_id ?? "",
+  tips: r.tips ?? 0,
+  cashier: r.cashier ?? "",
+  shiftId: r.shift_id ?? null,
+  cancelReason: r.cancel_reason ?? "",
 });
 
 export async function getOrder(id: string) {
-  const r = await q('SELECT * FROM orders WHERE id = $1', [id]);
+  const r = await q("SELECT * FROM orders WHERE id = $1", [id]);
   return r.rows[0] ? mapOrder(r.rows[0]) : null;
 }
 
 export async function setOrderStatus(id: string, status: string) {
-  const r = await q('UPDATE orders SET status = $2, updated_at = now() WHERE id = $1 RETURNING *', [id, status]);
+  const r = await q(
+    "UPDATE orders SET status = $2, updated_at = now() WHERE id = $1 RETURNING *",
+    [id, status],
+  );
   return r.rows[0] ? mapOrder(r.rows[0]) : null;
 }
 
 export async function saveDoc(id: string, data: unknown) {
-  await q('INSERT INTO site_docs (id, data, updated_at) VALUES ($1, $2, now()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()', [id, JSON.stringify(data)]);
+  await q(
+    "INSERT INTO site_docs (id, data, updated_at) VALUES ($1, $2, now()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()",
+    [id, JSON.stringify(data)],
+  );
 }
 export async function loadDoc<T>(id: string): Promise<T | null> {
-  const r = await q('SELECT data FROM site_docs WHERE id = $1', [id]);
+  const r = await q("SELECT data FROM site_docs WHERE id = $1", [id]);
   return (r.rows[0]?.data as T) ?? null;
 }
