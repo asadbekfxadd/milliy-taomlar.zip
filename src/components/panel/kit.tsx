@@ -74,6 +74,7 @@ const P: Record<string, string> = {
   qr: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2',
   gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-2-4-2 1-2-2V4h-4v2L9 8 7 7 5 11l2 1v0l-2 1 2 4 2-1 2 2v2h4v-2l2-2 2 1 2-4z',
   plug: 'M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4',
+  scooter: 'M5 17a2 2 0 1 0 0 .01M19 17a2 2 0 1 0 0 .01M7 17h8l2-6h-4M13 11l-2-5H8M17 11l2 6',
   calendar: 'M4 6h16v15H4zM4 10h16M8 3v5M16 3v5M8 14h3M8 17h3',
   clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
 };

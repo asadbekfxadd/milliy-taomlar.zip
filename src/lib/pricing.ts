@@ -38,3 +38,9 @@ export function promoDiscount(p: { pct: number; fixed: number; min: number } | n
   const d = p.pct > 0 ? Math.round((subtotal * p.pct) / 100) : Number(p.fixed) || 0;
   return Math.max(0, Math.min(d, subtotal));
 }
+
+/** Delivery fee for a zone: free once the dishes reach the zone's "free from" sum. */
+export function zoneFee(z: { fee: number; freeFrom?: number } | undefined, subtotal: number) {
+  if (!z) return 0;
+  return z.freeFrom && subtotal >= z.freeFrom ? 0 : Number(z.fee) || 0;
+}

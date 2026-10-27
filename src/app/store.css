@@ -364,3 +364,4 @@ body:has(.st) .toast{background:var(--s-ink);color:#fff}
 .st .bk-guests b{font-size:26px;min-width:32px;text-align:center}
 .st .bk-form .full{grid-column:1/-1}
 @media (max-width:640px){.st .bk-form{grid-template-columns:1fr}}
+.st .free-hint{font-size:13px;font-weight:700;color:var(--s-turq)}

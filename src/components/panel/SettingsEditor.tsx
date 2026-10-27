@@ -52,13 +52,13 @@ function useSettingsDoc(initial: Settings) {
 }
 
 const num = (v: string) => Number(v.replace(/[^\d.]/g, '')) || 0;
-const zonesTxt = (s: Settings) => s.zones.map((z) => `${z.name} | ${z.fee} | ${z.min}${z.uz ? ' | ' + z.uz : ''}`).join('\n');
+const zonesTxt = (s: Settings) => s.zones.map((z) => `${z.name} | ${z.fee} | ${z.min} | ${z.uz || ''} | ${z.freeFrom || ''}`.replace(/( \| )+$/, '')).join('\n');
 const parseZones = (t: string) =>
   t
     .split('\n')
     .map((l) => l.split('|').map((x) => x.trim()))
     .filter((a) => a[0])
-    .map((a) => ({ name: a[0], fee: num(a[1] || ''), min: num(a[2] || ''), ...(a[3] ? { uz: a[3] } : {}) }));
+    .map((a) => ({ name: a[0], fee: num(a[1] || ''), min: num(a[2] || ''), ...(a[3] ? { uz: a[3] } : {}), freeFrom: num(a[4] || '') }));
 
 export function SettingsPage({ initial }: { initial: Settings }) {
   const { s, set, bar } = useSettingsDoc(initial);
@@ -164,8 +164,9 @@ export function SettingsPage({ initial }: { initial: Settings }) {
             <input className="ip num" inputMode="numeric" value={String(s.deliveryMinutes ?? 20)} onChange={(e) => set('deliveryMinutes', Math.min(240, num(e.target.value)))} />
           </label>
           <label className="f full">
-            <span>Зоны доставки — по строке: название | цена доставки | минимальный заказ | по-узбекски</span>
+            <span>Зоны доставки — по строке: название | цена доставки | минимальный заказ | по-узбекски | бесплатно от</span>
             <textarea className="ip" rows={4} defaultValue={zonesTxt(s)} onChange={(e) => set('zones', parseZones(e.target.value))} />
+            <small>Например: «Центр | 10000 | 50000 | Markaz | 150000» — от 150 000 сум доставка бесплатно. Пустое последнее поле — всегда платно.</small>
           </label>
         </div>
       </div>

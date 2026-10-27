@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
   // staff area: pass the path on, so a sign-in redirect can come back to the same page
-  if (/^\/(admin|pos|waiter|kitchen|print)(\/|$)/.test(req.nextUrl.pathname)) {
+  if (/^\/(admin|pos|waiter|kitchen|print|courier|dispatch)(\/|$)/.test(req.nextUrl.pathname)) {
     const h = new Headers(req.headers);
     h.set('x-path', req.nextUrl.pathname + req.nextUrl.search);
     return NextResponse.next({ request: { headers: h } });

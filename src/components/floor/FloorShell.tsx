@@ -8,6 +8,7 @@ import { PanelProvider, usePanel } from '../panel/kit';
 import type { StaffOrder } from './types';
 
 export type Booking = { id: number; day: string; time: string; guests: number; name: string; phone: string; note: string; tableNo: number | null; status: string };
+export type CourierInfo = { id: string; name: string; phone: string; n: number; cash: number };
 export type ShiftInfo = { id: number; openedAt: string; openedBy: string } | null;
 type Me = { id: string; name: string; role: Role };
 type Ctx = {
@@ -16,6 +17,7 @@ type Ctx = {
   settings: Settings;
   orders: StaffOrder[];
   bookings: Booking[];
+  couriers: CourierInfo[];
   shift: ShiftInfo;
   online: boolean;
   refresh: () => Promise<void>;
@@ -38,6 +40,7 @@ function Inner({ me, menu, settings, children }: { me: Me; menu: Menu; settings:
   const [orders, setOrders] = useState<StaffOrder[]>([]);
   const [shift, setShift] = useState<ShiftInfo>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [couriers, setCouriers] = useState<CourierInfo[]>([]);
   const [newOnline, setNewOnline] = useState(0);
   const [online, setOnline] = useState(true);
   const path = usePathname();
@@ -53,6 +56,7 @@ function Inner({ me, menu, settings, children }: { me: Me; menu: Menu; settings:
       setOrders(j.orders || []);
       setShift(j.shift || null);
       setBookings(j.bookings || []);
+      setCouriers(j.couriers || []);
       setNewOnline(j.newOnline || 0);
       setOnline(true);
     } catch {
@@ -90,13 +94,15 @@ function Inner({ me, menu, settings, children }: { me: Me; menu: Menu; settings:
       ['/pos', 'Касса', 'pos'],
       ['/waiter', 'Официант', 'waiter'],
       ['/kitchen', 'Кухня', 'kitchen'],
+      ['/dispatch', 'Доставка', 'dispatch'],
+      ['/courier', 'Мои доставки', 'courier'],
       ['/print', 'Печать', 'print'],
       ['/admin', 'Управление', 'dashboard'],
     ] as const
   ).filter(([, , p]) => can(me.role, p));
 
   return (
-    <C.Provider value={{ me, menu, settings, orders, bookings, shift, online, refresh, act, toast }}>
+    <C.Provider value={{ me, menu, settings, orders, bookings, couriers, shift, online, refresh, act, toast }}>
       <div className="pn fl">
         <header className="fl-bar">
           <span className="ad-logo">{settings.name.slice(0, 1)}</span>

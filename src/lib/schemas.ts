@@ -91,7 +91,7 @@ export const settingsSchema = z.object({
   delivery: z.boolean(),
   prepTime: str(60),
   minOrder: money,
-  zones: z.array(z.object({ name: str(120), uz: str(120).optional().default(''), fee: money, min: money })).max(30),
+  zones: z.array(z.object({ name: str(120), uz: str(120).optional().default(''), fee: money, min: money, freeFrom: money.optional().default(0) })).max(30),
   taglineUz: str(200).optional().default(''),
   cityUz: str(80).optional().default(''),
   addressUz: str(200).optional().default(''),

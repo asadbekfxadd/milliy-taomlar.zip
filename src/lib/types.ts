@@ -31,7 +31,7 @@ export type Cat = { id: string; name: string; ru: string; theme?: string };
 export type ComboItem = { id: string; si: number; qty: number };
 export type Combo = { id: string; name: string; ru: string; descUz?: string; desc?: string; items: ComboItem[]; active?: boolean };
 export type Menu = { cats: Cat[]; dishes: Dish[]; combos?: Combo[]; v?: number };
-export type Zone = { name: string; fee: number; min: number; uz?: string };
+export type Zone = { name: string; fee: number; min: number; uz?: string; /** delivery is free when the dishes cost at least this much (0 = never) */ freeFrom?: number };
 export type Promo = { code: string; pct: number; fixed: number; min: number; active: boolean };
 export type Settings = {
   name: string;

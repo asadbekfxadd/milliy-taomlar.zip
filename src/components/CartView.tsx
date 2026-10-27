@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useClosed, useSite } from './Providers';
 import DishArt from './DishArt';
 import { Price } from './Dish';
-import { priceCart, promoDiscount } from '@/lib/pricing';
+import { priceCart, promoDiscount, zoneFee } from '@/lib/pricing';
 import { fmt, normalizePhone } from '@/lib/format';
 import { extraLabel, prepRange, sizeLabel, zoneName, type Key } from '@/lib/i18n';
 import { forgetTable, readTable } from './TableEntry';
@@ -54,7 +54,8 @@ export default function CartView() {
   const hall = type === 'hall' && table !== null;
   const service = hall ? Math.round((subtotal * (st.servicePct || 0)) / 100) : 0;
   const z = st.zones[zone];
-  const fee = del && z ? z.fee : 0;
+  const fee = del && z ? zoneFee(z, subtotal) : 0;
+  const toFree = del && z?.freeFrom && fee > 0 ? z.freeFrom - subtotal : 0;
   const discount = hall ? 0 : promoDiscount(promo, subtotal);
   const total = subtotal + fee + service - discount;
   const short = del && z ? Math.max(0, z.min - subtotal) : 0;
@@ -264,6 +265,7 @@ export default function CartView() {
                       {st.zones.map((zz, i) => (
                         <option key={i} value={i}>
                           {t('cart.zoneOpt', { z: zoneName(zz, lang), f: fmt(zz.fee), m: fmt(zz.min) })}
+                          {zz.freeFrom ? (lang === 'uz' ? ` · ${fmt(zz.freeFrom)} dan bepul` : ` · бесплатно от ${fmt(zz.freeFrom)}`) : ''}
                         </option>
                       ))}
                     </select>
@@ -373,9 +375,12 @@ export default function CartView() {
                 {del && (
                   <div>
                     <span>{t('cart.fee')}</span>
-                    <span className="num">
-                      {fmt(fee)} {t('sum')}
-                    </span>
+                    <span className="num">{fee ? `${fmt(fee)} ${t('sum')}` : lang === 'uz' ? 'bepul' : 'бесплатно'}</span>
+                  </div>
+                )}
+                {toFree > 0 && (
+                  <div className="free-hint">
+                    <span>{lang === 'uz' ? `Yana ${fmt(toFree)} soʻmlik taom qoʻshing — yetkazish bepul` : `Добавьте ещё на ${fmt(toFree)} сум — доставка будет бесплатной`}</span>
                   </div>
                 )}
                 {discount > 0 && (

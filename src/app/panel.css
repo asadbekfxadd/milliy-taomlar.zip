@@ -499,3 +499,39 @@ a.kpi:hover{border-color:var(--line2)}
 .bk-time{font-weight:800;color:#1C4F9C;min-width:44px}
 .pos-table em.bk{background:#1C4F9C;color:#fff;font-style:normal;border-radius:6px;padding:2px 6px;font-size:12px}
 .sx-btn.sm{min-height:34px;padding:4px 12px;font-size:13px}
+
+/* delivery: dispatcher board and courier phone */
+.dl{display:flex;flex-direction:column;gap:14px}
+.dl-couriers{display:flex;gap:10px;flex-wrap:wrap}
+.dl-c{background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;display:flex;flex-direction:column;font-size:13px;min-width:150px}
+.dl-c b{font-size:15px}
+.dl-c span{color:var(--mute)}
+.dl-c.empty{color:var(--mute)}
+.dl-board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:start}
+.dl-col{background:rgba(0,0,0,.03);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+.dl-col h3{margin:0;font-size:14px;display:flex;justify-content:space-between}
+.dl-col.ready h3{color:var(--green-2)}
+.dl-col.road h3{color:#1C4F9C}
+.dl-card,.cr-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.dl-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dl-addr{font-weight:700;font-size:15px;line-height:1.25}
+.dl-when{font-weight:800;color:#B5541B;font-size:13px}
+.dl-pay{font-size:13px;font-weight:700;border-radius:8px;padding:4px 8px;align-self:flex-start}
+.dl-pay.ok{background:var(--green-soft);color:var(--green-2)}
+.dl-pay.warn{background:var(--saffron-soft);color:var(--saffron-ink)}
+.dl-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.dl-row .sx-input{flex:1;min-width:120px;min-height:36px;padding:4px 8px}
+.dl-items{margin:0;padding:0;list-style:none;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.dl-empty{color:var(--mute);text-align:center;padding:16px 0}
+.dl-done{font-size:13px;display:flex;gap:10px;flex-wrap:wrap;color:var(--mute)}
+@media (max-width:1100px){.dl-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.dl-board{grid-template-columns:1fr}}
+.cr{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.cr-day{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px}
+.cr-tabs{align-self:stretch;display:flex}
+.cr-tabs button{flex:1}
+.cr-card.ready{border-color:var(--green-2);box-shadow:0 0 0 2px var(--green-soft)}
+.cr-addr{display:flex;flex-direction:column;font-size:19px;font-weight:800;line-height:1.25;color:inherit;text-decoration:none}
+.cr-addr small{font-size:13px;font-weight:600;color:#1C4F9C;text-decoration:underline}
+.cr-act{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cr-act .grow{flex:1}

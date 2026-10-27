@@ -3,7 +3,7 @@ import { randomBytes } from 'crypto';
 import { mapOrder, newId, q } from '@/lib/db';
 import { getMenu, getSettings } from '@/lib/data';
 import { orderInput } from '@/lib/schemas';
-import { modsOf, promoDiscount, unitPrice } from '@/lib/pricing';
+import { modsOf, promoDiscount, unitPrice, zoneFee } from '@/lib/pricing';
 import { findPromo } from '@/lib/promo';
 import { orderWindow, timeInHours } from '@/lib/hours';
 import { normalizePhone } from '@/lib/format';
@@ -131,7 +131,7 @@ export async function POST(req: Request) {
     if (!z) return err('Выберите зону доставки', 'zone');
     if (!o.address || o.address.length < 5) return err('Укажите улицу и дом', 'address');
     if (subtotal < z.min) return err(lang === 'uz' ? `Bu hudud uchun minimal buyurtma ${z.min} soʻm` : `Минимальный заказ для этой зоны ${z.min} сум`);
-    fee = z.fee;
+    fee = zoneFee(z, subtotal);
     zone = z.name;
   }
 

@@ -1,6 +1,6 @@
 /* Roles and permissions. Shared by server checks and the sidebar (client-safe: no secrets here). */
 
-export type Role = 'owner' | 'manager' | 'cashier' | 'waiter' | 'cook' | 'storekeeper';
+export type Role = 'owner' | 'manager' | 'cashier' | 'waiter' | 'cook' | 'storekeeper' | 'courier';
 
 export type Perm =
   | 'dashboard'
@@ -20,25 +20,27 @@ export type Perm =
   | 'waiter'
   | 'kitchen'
   | 'print'
-  | 'void';
+  | 'void'
+  | 'courier'
+  | 'dispatch';
 
 export const ROLES: Record<Role, { name: string; hint: string; perms: Perm[]; home: string }> = {
   owner: {
     name: 'Владелец',
     hint: 'Всё, включая сотрудников и журнал действий',
-    perms: ['dashboard', 'orders', 'menu', 'promos', 'stock', 'recipes', 'customers', 'analytics', 'finance', 'employees', 'tables', 'settings', 'audit', 'pos', 'waiter', 'kitchen', 'print', 'void'],
+    perms: ['dashboard', 'orders', 'menu', 'promos', 'stock', 'recipes', 'customers', 'analytics', 'finance', 'employees', 'tables', 'settings', 'audit', 'pos', 'waiter', 'kitchen', 'print', 'void', 'dispatch'],
     home: '/admin',
   },
   manager: {
     name: 'Управляющий',
     hint: 'Меню, склад, заказы, отчёты, касса; может отменять позиции',
-    perms: ['dashboard', 'orders', 'menu', 'promos', 'stock', 'recipes', 'customers', 'analytics', 'finance', 'tables', 'settings', 'pos', 'waiter', 'kitchen', 'print', 'void'],
+    perms: ['dashboard', 'orders', 'menu', 'promos', 'stock', 'recipes', 'customers', 'analytics', 'finance', 'tables', 'settings', 'pos', 'waiter', 'kitchen', 'print', 'void', 'dispatch'],
     home: '/admin',
   },
   cashier: {
     name: 'Кассир',
-    hint: 'Касса и смена, столы, заказы с сайта',
-    perms: ['pos', 'waiter', 'orders', 'print'],
+    hint: 'Касса и смена, столы, заказы с сайта, курьеры',
+    perms: ['pos', 'waiter', 'orders', 'print', 'dispatch'],
     home: '/pos',
   },
   waiter: {
@@ -59,6 +61,12 @@ export const ROLES: Record<Role, { name: string; hint: string; perms: Perm[]; ho
     perms: ['stock'],
     home: '/admin/stock',
   },
+  courier: {
+    name: 'Курьер',
+    hint: 'Свои доставки с телефона: адрес, звонок гостю, «Забрал» и «Доставил»',
+    perms: ['courier'],
+    home: '/courier',
+  },
 };
 
 export const ROLE_IDS = Object.keys(ROLES) as Role[];
@@ -72,6 +80,7 @@ export const NAV: NavItem[] = [
   { group: 'Работа', label: 'Касса', href: '/pos', perm: 'pos', icon: 'cash' },
   { group: 'Работа', label: 'Официант', href: '/waiter', perm: 'waiter', icon: 'tray' },
   { group: 'Работа', label: 'Кухня', href: '/kitchen', perm: 'kitchen', icon: 'fire' },
+  { group: 'Работа', label: 'Доставка', href: '/dispatch', perm: 'dispatch', icon: 'scooter' },
   { group: 'Работа', label: 'Заказы', href: '/admin/orders', perm: 'orders', icon: 'list' },
   { group: 'Работа', label: 'Бронь столов', href: '/admin/reservations', perm: 'tables', icon: 'calendar' },
   { group: 'Меню', label: 'Блюда', href: '/admin/menu', perm: 'menu', icon: 'dish' },

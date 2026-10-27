@@ -116,6 +116,7 @@ export default async function ContactsPage() {
                         <td>{zoneName(z, lang)}</td>
                         <td>
                           {fmt(z.fee)} {t('sum')}
+                          {z.freeFrom ? <div className="cap">{lang === 'uz' ? `${fmt(z.freeFrom)} soʻmdan bepul` : `бесплатно от ${fmt(z.freeFrom)} сум`}</div> : null}
                         </td>
                         <td>
                           {fmt(z.min)} {t('sum')}

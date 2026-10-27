@@ -101,6 +101,10 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS cashier   text NOT NULL DEFAULT '';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS shift_id  integer;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS stock_done boolean NOT NULL DEFAULT false;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancel_reason text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_id   text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier      text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS picked_at    timestamptz;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at timestamptz;
 CREATE INDEX IF NOT EXISTS orders_phone_idx ON orders (phone) WHERE phone <> '';
 CREATE INDEX IF NOT EXISTS orders_paid_idx ON orders (paid_at) WHERE paid_at IS NOT NULL;
 CREATE TABLE IF NOT EXISTS employees (
@@ -223,6 +227,7 @@ export type OrderRow = {
   payStatus: string; acceptedAt: string | null; etaAt: string | null; customerChat: number | null;
   promo: string; promoPct: number; promoFixed: number; discount: number; lang: string;
   waiterId: string; tips: number; cashier: string; shiftId: number | null; cancelReason: string;
+  courierId: string; courier: string; pickedAt: string | null; deliveredAt: string | null;
 };
 export const mapOrder = (r: any): OrderRow => ({
   id: r.id, no: r.no, token: r.token, status: r.status, type: r.type, zone: r.zone, fee: r.fee, address: r.address,
@@ -234,6 +239,7 @@ export const mapOrder = (r: any): OrderRow => ({
   etaAt: r.eta_at ? new Date(r.eta_at).toISOString() : null, customerChat: r.customer_chat ? Number(r.customer_chat) : null,
   promo: r.promo ?? '', promoPct: Number(r.promo_pct ?? 0), promoFixed: r.promo_fixed ?? 0, discount: r.discount ?? 0, lang: r.lang ?? 'ru',
   waiterId: r.waiter_id ?? '', tips: r.tips ?? 0, cashier: r.cashier ?? '', shiftId: r.shift_id ?? null, cancelReason: r.cancel_reason ?? '',
+  courierId: r.courier_id ?? '', courier: r.courier ?? '', pickedAt: r.picked_at ? new Date(r.picked_at).toISOString() : null, deliveredAt: r.delivered_at ? new Date(r.delivered_at).toISOString() : null,
 });
 
 export async function getOrder(id: string) {
