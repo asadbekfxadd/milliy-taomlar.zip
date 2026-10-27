@@ -1,4 +1,5 @@
-import type { CartItem, Dish, Menu } from './types';
+import type { CartItem, Dish, Menu, Settings } from './types';
+import { happyPct, happyPrice } from './offers';
 
 /** Shared by the browser (display) and the server (the only source of truth for totals). */
 export const basePrice = (d: Dish) => (d.sizes?.length ? Number(d.sizes[0].p) : Number(d.price)) || 0;
@@ -20,15 +21,18 @@ export function modsOf(d: Dish, si: number, ex: number[]) {
 
 export const cartKey = (id: string, si: number, ex: number[]) => `${id}|${si}|${[...ex].sort((a, b) => a - b).join(',')}`;
 
-export function priceCart(menu: Menu, cart: CartItem[]) {
+/** Cart lines with prices; with settings, happy hours are applied (the server does the same). */
+export function priceCart(menu: Menu, cart: CartItem[], st?: Pick<Settings, 'happyHours'>) {
   const lines = cart
     .map((i) => {
       const d = menu.dishes.find((x) => x.id === i.id);
       if (!d) return null;
-      const unit = unitPrice(d, i.si, i.ex);
-      return { ...i, d, unit, total: unit * i.qty, mods: modsOf(d, i.si, i.ex) };
+      const was = unitPrice(d, i.si, i.ex);
+      const hh = st ? happyPct(st, d.cat) : 0;
+      const unit = happyPrice(was, hh);
+      return { ...i, d, unit, was, hh, total: unit * i.qty, mods: modsOf(d, i.si, i.ex) };
     })
-    .filter(Boolean) as (CartItem & { d: Dish; unit: number; total: number; mods: string[] })[];
+    .filter(Boolean) as (CartItem & { d: Dish; unit: number; was: number; hh: number; total: number; mods: string[] })[];
   return { lines, subtotal: lines.reduce((s, l) => s + l.total, 0) };
 }
 

@@ -4,7 +4,7 @@ import { prettyPhone } from '@/lib/format';
 import { STATUS_RU, TYPE_RU } from '@/lib/rbac';
 import { api, money, PageHead, usePanel, when } from './kit';
 
-type C = { phone: string; name: string; orders: number; spent: number; first: string; last: string; delivery: boolean; note: string };
+type C = { phone: string; name: string; orders: number; spent: number; first: string; last: string; delivery: boolean; note: string; points: number };
 const DAY = 86400_000;
 const SEG: [string, string, (c: C) => boolean][] = [
   ['all', 'Все', () => true],
@@ -26,7 +26,7 @@ export default function Customers({ list }: { list: C[] }) {
 
   return (
     <>
-      <PageHead title="Клиенты" sub="Гости, которые заказывали на сайте: сколько раз, на какую сумму и когда последний раз. Сюда можно записать заметку — её увидят все менеджеры." />
+      <PageHead title="Клиенты" sub="Гости с номером телефона — с сайта, из Telegram и с кассы: сколько раз заказывали, на какую сумму, сколько баллов. Сюда можно записать заметку и начислить баллы вручную." />
       <div className="kpis">
         <div className="kpi">
           <span>Всего гостей</span>
@@ -67,6 +67,7 @@ export default function Customers({ list }: { list: C[] }) {
                   <th>Телефон</th>
                   <th className="r">Заказов</th>
                   <th className="r">Потратил</th>
+                  <th className="r">Баллы</th>
                   <th>Последний заказ</th>
                 </tr>
               </thead>
@@ -80,6 +81,7 @@ export default function Customers({ list }: { list: C[] }) {
                     <td className="num">{prettyPhone(c.phone)}</td>
                     <td className="r num">{c.orders}</td>
                     <td className="r num">{money(c.spent)}</td>
+                    <td className="r num">{c.points ? money(c.points) : '—'}</td>
                     <td className="muted num">{when(c.last)}</td>
                   </tr>
                 ))}
@@ -122,6 +124,7 @@ function Guest({ c, onClose }: { c: C; onClose: () => void }) {
           <span>Заметка о госте</span>
           <textarea className="ip" rows={2} placeholder="Например: аллергия на орехи, любит острое, заказывает на офис" value={note} onChange={(e) => setNote(e.target.value)} />
         </label>
+        <PointsBox c={c} />
         <button
           className="b sm"
           style={{ alignSelf: 'flex-start' }}
@@ -160,6 +163,58 @@ function Guest({ c, onClose }: { c: C; onClose: () => void }) {
           Закрыть
         </button>
       </div>
+    </div>
+  );
+}
+
+function PointsBox({ c }: { c: C }) {
+  const { toast } = usePanel();
+  const [pts, setPts] = useState(c.points);
+  const [hist, setHist] = useState<{ points: number; note: string; at: string }[]>([]);
+  const [n, setN] = useState('');
+  const [why, setWhy] = useState('');
+  useEffect(() => {
+    api(`/api/admin/loyalty?phone=${encodeURIComponent(c.phone)}`)
+      .then((j) => (setPts(j.points), setHist(j.history)))
+      .catch(() => {});
+  }, [c.phone]);
+  const go = async (sign: 1 | -1) => {
+    try {
+      const j = await api('/api/admin/loyalty', 'POST', { phone: c.phone, points: sign * Number(n.replace(/\D/g, '')), note: why });
+      setPts(j.points);
+      c.points = j.points;
+      setN('');
+      setWhy('');
+      toast('Баллы изменены');
+      api(`/api/admin/loyalty?phone=${encodeURIComponent(c.phone)}`).then((x) => setHist(x.history));
+    } catch (e: any) {
+      toast(e.message);
+    }
+  };
+  return (
+    <div className="f">
+      <span>
+        Баллы: <b className="num">{money(pts)}</b>
+      </span>
+      <div className="sx-row">
+        <input className="ip sm num" style={{ width: 110 }} inputMode="numeric" placeholder="Сколько" value={n} onChange={(e) => setN(e.target.value)} />
+        <input className="ip sm" style={{ flex: 1 }} placeholder="Причина: подарок, компенсация…" value={why} onChange={(e) => setWhy(e.target.value)} />
+        <button className="b sm" disabled={!n || !why.trim()} onClick={() => go(1)}>
+          Начислить
+        </button>
+        <button className="b sm" disabled={!n || !why.trim()} onClick={() => go(-1)}>
+          Списать
+        </button>
+      </div>
+      {hist.length > 0 && (
+        <div className="muted small">
+          {hist.slice(0, 6).map((h, i) => (
+            <div key={i}>
+              {when(h.at)} · <b className="num">{h.points > 0 ? '+' : ''}{money(h.points)}</b> · {h.note}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

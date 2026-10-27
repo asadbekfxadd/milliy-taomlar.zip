@@ -535,3 +535,17 @@ a.kpi:hover{border-color:var(--line2)}
 .cr-addr small{font-size:13px;font-weight:600;color:#1C4F9C;text-decoration:underline}
 .cr-act{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .cr-act .grow{flex:1}
+.pay-pts{display:flex;flex-direction:column;gap:6px;background:var(--soft);border-radius:12px;padding:8px 10px}
+
+/* offers */
+.of-kinds{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.of-kind{display:flex;flex-direction:column;gap:4px;text-align:left;border:1px dashed var(--line2);background:var(--card);border-radius:12px;padding:12px 14px;cursor:pointer;font:inherit}
+.of-kind:hover{border-color:var(--green)}
+.of-kind span{font-size:13px;color:var(--mute)}
+.of-win{display:flex;flex-direction:column;gap:8px}
+.of-win .f{flex:0 1 160px}
+.of-pick{display:flex;flex-direction:column;gap:8px}
+.of-find{position:relative;max-width:420px}
+.of-found{position:absolute;z-index:5;left:0;right:0;top:100%;background:var(--card);border:1px solid var(--line2);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.08);display:flex;flex-direction:column;overflow:hidden}
+.of-found button{border:0;background:none;text-align:left;padding:9px 12px;cursor:pointer;font:inherit}
+.of-found button:hover{background:var(--soft)}

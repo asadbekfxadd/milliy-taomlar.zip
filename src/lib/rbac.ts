@@ -89,6 +89,7 @@ export const NAV: NavItem[] = [
   { group: 'Склад', label: 'Остатки', href: '/admin/stock', perm: 'stock', icon: 'box' },
   { group: 'Склад', label: 'Техкарты', href: '/admin/recipes', perm: 'recipes', icon: 'recipe' },
   { group: 'Гости', label: 'Клиенты', href: '/admin/customers', perm: 'customers', icon: 'users' },
+  { group: 'Гости', label: 'Акции и баллы', href: '/admin/offers', perm: 'promos', icon: 'gift' },
   { group: 'Гости', label: 'Промокоды', href: '/admin/promos', perm: 'promos', icon: 'tag' },
   { group: 'Отчёты', label: 'Аналитика', href: '/admin/analytics', perm: 'analytics', icon: 'chart' },
   { group: 'Отчёты', label: 'Смены и касса', href: '/admin/shifts', perm: 'finance', icon: 'wallet' },

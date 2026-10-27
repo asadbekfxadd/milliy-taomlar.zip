@@ -365,3 +365,17 @@ body:has(.st) .toast{background:var(--s-ink);color:#fff}
 .st .bk-form .full{grid-column:1/-1}
 @media (max-width:640px){.st .bk-form{grid-template-columns:1fr}}
 .st .free-hint{font-size:13px;font-weight:700;color:var(--s-turq)}
+.st .pts-row{display:flex;gap:10px;align-items:center;background:var(--s-soft);border-radius:12px;padding:12px 14px;cursor:pointer;font-weight:700}
+.st .pts-row input{width:20px;height:20px;accent-color:var(--s-lapis)}
+.st .pts-row small{display:block;font-weight:500;color:var(--s-mute,#6b7280);font-size:12.5px}
+.st .s-card .tag.hh{background:#C2410C;color:#fff}
+.st .s-card .price .was{margin-left:6px;font-size:13px;font-weight:600;color:var(--s-mute,#9ca3af)}
+.st .ci .was{text-decoration:line-through;color:#9ca3af;margin-left:6px}
+.st .of-list{display:flex;flex-direction:column;gap:12px;max-width:760px}
+.st .of-item{display:flex;gap:16px;align-items:flex-start;background:var(--s-soft);border-radius:18px;padding:16px 18px}
+.st .of-item h3{margin:0 0 4px;font-size:18px}
+.st .of-item p{margin:0 0 4px}
+.st .of-item small{color:#6b7280;font-size:13px}
+.st .of-pct{flex:none;min-width:64px;height:64px;border-radius:16px;display:grid;place-items:center;background:var(--s-lapis);color:#fff;font-size:20px;padding:0 8px}
+.st .of-item.hh .of-pct{background:#C2410C}
+.st .of-item.pts .of-pct{background:var(--s-turq)}

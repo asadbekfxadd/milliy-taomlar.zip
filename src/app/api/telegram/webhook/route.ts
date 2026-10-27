@@ -4,6 +4,8 @@ import { getSettings } from '@/lib/data';
 import { sendToKitchen, updateStatus } from '@/lib/pos';
 import { answerCallback, STATUS_RU, tg } from '@/lib/telegram';
 import { stageText } from '@/lib/notify';
+import { guestMessage } from '@/lib/guestbot';
+import { upsertTgUser } from '@/lib/tgapp';
 import type { OrderItem } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -20,15 +22,18 @@ export async function POST(req: Request) {
   const st = await getSettings();
 
   const msg = u?.message;
-  if (msg?.chat?.type === 'private' && typeof msg.text === 'string') {
-    const m = msg.text.match(/^\/start\s+o([a-f0-9]{24})([a-f0-9]{16})$/);
+  if (msg?.chat?.type === 'private') {
+    const m = typeof msg.text === 'string' ? msg.text.match(/^\/start\s+o([a-f0-9]{24})([a-f0-9]{16})$/) : null;
     if (!m) {
-      await tg('sendMessage', {
-        chat_id: msg.chat.id,
-        text: `Assalomu alaykum! Bu ${st.name} boti. Buyurtma holatini olish uchun saytdagi buyurtma sahifasida «Telegramda xabar olish» tugmasini bosing.\n\nЗдравствуйте! Это бот ${st.name}. Чтобы получать статус заказа, нажмите «Уведомления в Telegram» на странице заказа на сайте.`,
-      });
+      const handled = await guestMessage(msg, st).catch((e) => (console.error('guestbot', e), false));
+      if (!handled)
+        await tg('sendMessage', {
+          chat_id: msg.chat.id,
+          text: `Assalomu alaykum! Bu ${st.name} boti. /menu — menyu, /bonus — ballar, /orders — buyurtmalar.\n\nЗдравствуйте! Это бот ${st.name}. /menu — меню, /bonus — баллы, /orders — заказы.`,
+        });
       return Response.json({ ok: true });
     }
+    if (msg.from) await upsertTgUser(msg.from).catch(() => {});
     const o = await getOrder(m[1]);
     const ok = o && o.token.length >= 16 && timingSafeEqual(Buffer.from(o.token.slice(0, 16)), Buffer.from(m[2]));
     if (!o || !ok) {

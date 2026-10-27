@@ -6,6 +6,8 @@ import { useClosed, useSite } from './Providers';
 import DishArt from './DishArt';
 import { Price } from './Dish';
 import { priceCart, promoDiscount, zoneFee } from '@/lib/pricing';
+import { computeDeals, maxRedeem } from '@/lib/offers';
+import { tgInitData } from './TelegramApp';
 import { fmt, normalizePhone } from '@/lib/format';
 import { extraLabel, prepRange, sizeLabel, zoneName, type Key } from '@/lib/i18n';
 import { forgetTable, readTable } from './TableEntry';
@@ -17,7 +19,7 @@ export default function CartView() {
   const { menu, settings: st, cart, setQty, remove, clear, online, t, lang } = useSite();
   const router = useRouter();
   const closed = useClosed();
-  const { lines, subtotal } = useMemo(() => priceCart(menu, cart), [menu, cart]);
+  const { lines, subtotal } = useMemo(() => priceCart(menu, cart, st), [menu, cart, st]);
   const types = [st.delivery && 'delivery', st.pickup && 'pickup'].filter(Boolean) as ('pickup' | 'delivery')[];
   const [type, setType] = useState<'pickup' | 'delivery' | 'hall' | null>(types[0] ?? null);
   const [table, setTable] = useState<number | null>(null);
@@ -32,6 +34,26 @@ export default function CartView() {
   const [code, setCode] = useState('');
   const [promo, setPromo] = useState<Promo | null>(null);
   const [promoMsg, setPromoMsg] = useState<string | null>(null);
+  // inside Telegram: the guest's confirmed phone and points
+  const [tg, setTg] = useState<{ initData: string; phone: string; points: number; maxRedeemPct: number; enabled: boolean; shareLink: string | null } | null>(null);
+  const [usePoints, setUsePoints] = useState(false);
+  useEffect(() => {
+    const load = () => {
+      const initData = tgInitData();
+      if (!initData) return;
+      fetch('/api/tg/me', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ initData }) })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (!j) return;
+          setTg({ initData, phone: j.phone, points: j.points, maxRedeemPct: j.loyalty.maxRedeemPct, enabled: j.loyalty.enabled, shareLink: j.shareLink });
+          setF((x) => ({ ...x, name: x.name || j.name || '', phone: j.phone || x.phone }));
+        })
+        .catch(() => {});
+    };
+    load();
+    addEventListener('mt-tg', load);
+    return () => removeEventListener('mt-tg', load);
+  }, []);
 
   useEffect(() => {
     try {
@@ -56,8 +78,16 @@ export default function CartView() {
   const z = st.zones[zone];
   const fee = del && z ? zoneFee(z, subtotal) : 0;
   const toFree = del && z?.freeFrom && fee > 0 ? z.freeFrom - subtotal : 0;
-  const discount = hall ? 0 : promoDiscount(promo, subtotal);
-  const total = subtotal + fee + service - discount;
+  const deals = useMemo(
+    () => (hall ? { applied: [], discount: 0, promoOk: true, hints: [] } : computeDeals(st, lines.map((l) => ({ id: l.id, cat: l.d.cat, unit: l.unit, qty: l.qty, hh: l.hh })), { channel: 'site' })),
+    [hall, st, lines],
+  );
+  const promoBlocked = Boolean(promo) && !deals.promoOk;
+  const discount = hall || promoBlocked ? 0 : promoDiscount(promo, subtotal - deals.discount);
+  const firstDeal = !hall && (st.deals || []).find((d) => d.kind === 'first' && d.active && d.site);
+  const canPoints = !hall && tg?.enabled && tg.phone && tg.points > 0 && tg.phone.replace(/\D/g, '').endsWith(f.phone.replace(/\D/g, '').slice(-9));
+  const points = canPoints && usePoints ? maxRedeem({ enabled: true, earnPct: 0, maxRedeemPct: tg!.maxRedeemPct, welcome: 0 }, subtotal - deals.discount - discount, tg!.points) : 0;
+  const total = subtotal + fee + service - discount - deals.discount - points;
   const short = del && z ? Math.max(0, z.min - subtotal) : 0;
   const blocked = !hall && Boolean(closed);
   const gone = lines.filter((l) => !l.d.available);
@@ -111,7 +141,9 @@ export default function CartView() {
           note: f.note,
           when: !hall && when === 'time' ? f.time : 'asap',
           pay,
-          promo: !hall && promo ? promo.code : '',
+          promo: !hall && promo && !promoBlocked ? promo.code : '',
+          tg: tg?.initData || undefined,
+          points: points || undefined,
           lang,
           website: f.website,
         }),
@@ -354,6 +386,32 @@ export default function CartView() {
                     </div>
                   )}
                   {promoMsg && !promo && <span className="er">{promoMsg}</span>}
+                  {promoBlocked && <span className="er">{lang === 'uz' ? 'Promokod aksiya bilan birga ishlamaydi' : 'Промокод не суммируется с акцией в корзине'}</span>}
+                </div>
+              )}
+
+              {!hall && tg?.enabled && (
+                <div className="fld full pts">
+                  {canPoints ? (
+                    <label className="pts-row">
+                      <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} />
+                      <span>
+                        {lang === 'uz' ? `Ballar bilan toʻlash: hisobda ${fmt(tg.points)}` : `Оплатить баллами: на счету ${fmt(tg.points)}`}
+                        <small>{lang === 'uz' ? `buyurtmaning ${tg.maxRedeemPct}% gacha` : `до ${tg.maxRedeemPct}% заказа`}</small>
+                      </span>
+                    </label>
+                  ) : !tg.phone ? (
+                    <span className="cap">
+                      {lang === 'uz' ? 'Ball yigʻish va ular bilan toʻlash uchun botda raqamingizni ulashing.' : 'Чтобы копить и тратить баллы, поделитесь номером в нашем боте.'}{' '}
+                      {tg.shareLink && (
+                        <a className="link" href={tg.shareLink}>
+                          {lang === 'uz' ? 'Raqamni ulashish' : 'Поделиться номером'}
+                        </a>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="cap">{lang === 'uz' ? `Hisobingizda ${fmt(tg.points)} ball` : `На вашем счету ${fmt(tg.points)} баллов`}</span>
+                  )}
                 </div>
               )}
 
@@ -381,6 +439,36 @@ export default function CartView() {
                 {toFree > 0 && (
                   <div className="free-hint">
                     <span>{lang === 'uz' ? `Yana ${fmt(toFree)} soʻmlik taom qoʻshing — yetkazish bepul` : `Добавьте ещё на ${fmt(toFree)} сум — доставка будет бесплатной`}</span>
+                  </div>
+                )}
+                {deals.applied.map((d) => (
+                  <div className="disc" key={d.id}>
+                    <span>{lang === 'uz' ? (st.deals || []).find((x) => x.id === d.id)?.nameUz || d.name : d.name}</span>
+                    <span className="num">
+                      −{fmt(d.amount)} {t('sum')}
+                    </span>
+                  </div>
+                ))}
+                {points > 0 && (
+                  <div className="disc">
+                    <span>{lang === 'uz' ? 'Ballar bilan' : 'Баллами'}</span>
+                    <span className="num">
+                      −{fmt(points)} {t('sum')}
+                    </span>
+                  </div>
+                )}
+                {deals.hints.map((h) => (
+                  <div className="free-hint" key={h.dealId}>
+                    <span>{lang === 'uz' ? h.uz : h.ru}</span>
+                  </div>
+                ))}
+                {firstDeal && (
+                  <div className="free-hint">
+                    <span>
+                      {lang === 'uz'
+                        ? `Birinchi buyurtmaga −${firstDeal.pct}% — raqamingiz boʻyicha avtomatik hisoblanadi`
+                        : `На первый заказ −${firstDeal.pct}% — посчитаем автоматически по номеру телефона`}
+                    </span>
                   </div>
                 )}
                 {discount > 0 && (

@@ -20,7 +20,7 @@ export default function Integrations({ integ }: { integ: Integ }) {
   const call = async (action: string) => {
     try {
       const r = await api('/api/admin/telegram', 'POST', { action });
-      toast(r.ok ? (action === 'webhook' ? 'Кнопки в Telegram подключены' : 'Тестовое сообщение отправлено') : 'Telegram ответил: ' + (r.description || 'ошибка'));
+      toast(r.ok ? (action === 'webhook' ? 'Кнопки в Telegram подключены' : action === 'guestbot' ? 'Бот для гостей готов: в нём появилась кнопка «Menyu»' : 'Тестовое сообщение отправлено') : 'Telegram ответил: ' + (r.description || 'ошибка'));
     } catch (e: any) {
       toast(e.message);
     }
@@ -47,6 +47,18 @@ export default function Integrations({ integ }: { integ: Integ }) {
           </>
         ) : (
           'Создайте бота через @BotFather и задайте TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID.'
+        )}
+      </Row>
+      <Row on={integ.telegram && integ.telegramWebhook} title="Бот и Mini App для гостей">
+        Гость открывает бота, нажимает «Menyu» — и видит этот сайт прямо в Telegram: меню, корзина, заказ, бронь. Может поделиться номером (Telegram его подтверждает), смотреть баллы командой /bonus и заказы /orders, платить баллами в корзине.
+        {integ.telegram && integ.telegramWebhook ? (
+          <div className="sx-row" style={{ marginTop: 10 }}>
+            <button className="b sm main" onClick={() => call('guestbot')}>
+              Подключить бота для гостей
+            </button>
+          </div>
+        ) : (
+          ' Нужны TELEGRAM_BOT_TOKEN, PUBLIC_URL (https) и TELEGRAM_WEBHOOK_SECRET.'
         )}
       </Row>
       <Row on={integ.payme} title="Онлайн-оплата Payme">

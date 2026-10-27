@@ -32,6 +32,9 @@ export type StaffOrder = {
   etaAt: string | null;
   acceptedAt: string | null;
   courierId: string;
+  deals?: { id: string; name: string; amount: number }[];
+  dealDiscount?: number;
+  pointsUsed?: number;
   courier: string;
   pickedAt: string | null;
   deliveredAt: string | null;

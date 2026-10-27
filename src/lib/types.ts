@@ -1,3 +1,5 @@
+import type { Deal, HappyHour, LoyaltyCfg } from './offers';
+
 /* Texts are stored in Russian (`label`, `desc`, …) with optional Uzbek twins (`uz`, `descUz`, …). */
 export type Size = { label: string; w: string; p: number; uz?: string };
 export type Extra = { label: string; p: number; uz?: string };
@@ -76,6 +78,10 @@ export type Settings = {
   /* table booking from the site */
   bookingEnabled?: boolean;
   bookingMaxGuests?: number;
+  /* promotions without a code */
+  happyHours?: HappyHour[];
+  deals?: Deal[];
+  loyalty?: LoyaltyCfg;
 };
 export type CartItem = { key: string; id: string; si: number; ex: number[]; qty: number };
 export type KitchenState = 'queued' | 'cooking' | 'ready';
@@ -85,6 +91,11 @@ export type OrderItem = {
   /** serving course: 1 now, 2 hot, 3 dessert; 2 and 3 wait ("hold") until the waiter fires them */
   course?: 1 | 2 | 3;
   hold?: boolean;
+  /** category id (for deals) */
+  cat?: string;
+  /** happy-hour % already in `unit`, and the price before it */
+  hh?: number;
+  was?: number;
   /** portion index (for the recipe); absent on orders made before recipes existed */
   si?: number;
   /** cancelled after it went to the kitchen: kept on the check, struck through, not charged */
@@ -107,6 +118,9 @@ export type PublicOrder = {
   subtotal: number;
   discount?: number;
   promo?: string;
+  deals?: { id: string; name: string; amount: number }[];
+  pointsUsed?: number;
+  pointsEarned?: number;
   total: number;
   createdAt: string;
 };

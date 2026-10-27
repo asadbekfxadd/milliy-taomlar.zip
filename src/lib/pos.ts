@@ -4,6 +4,8 @@ import { getOrder, mapOrder, q, setOrderStatus, type OrderRow } from './db';
 import { notifyNewOrder, refreshOrderMessage } from './telegram';
 import { etaText, paidText, stageText, tellGuest } from './notify';
 import { modsOf, unitPrice } from './pricing';
+import { computeDeals, happyPct, happyPrice } from './offers';
+import { settleOrder, unsettleOrder } from './loyalty';
 import { deductForOrder, returnForOrder } from './stock';
 import { STATIONS as ST } from './rbac';
 
@@ -27,22 +29,36 @@ export function priceLine(menu: Menu, st: Settings, i: { id: string; si: number;
   if (d.sizes.length ? i.si >= d.sizes.length : i.si !== 0) return 'Неверный размер порции';
   const ex = [...new Set(i.ex)];
   if (ex.some((x) => x >= d.extras.length)) return 'Неверная добавка';
-  const unit = unitPrice(d, i.si, ex);
-  if (unit <= 0) return `У «${d.name}» не указана цена — добавьте её в управлении`;
-  return { id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: i.note || '', station: stationOf(menu, st, d.id), sent: false, ks: null, si: d.sizes.length ? i.si : undefined, ...(i.course && i.course > 1 ? { course: i.course, hold: true } : {}) };
+  const full = unitPrice(d, i.si, ex);
+  if (full <= 0) return `У «${d.name}» не указана цена — добавьте её в управлении`;
+  const hh = happyPct(st, d.cat);
+  const unit = happyPrice(full, hh);
+  return { id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: i.note || '', station: stationOf(menu, st, d.id), sent: false, ks: null, si: d.sizes.length ? i.si : undefined, cat: d.cat, ...(hh ? { hh, was: full } : {}), ...(i.course && i.course > 1 ? { course: i.course, hold: true } : {}) };
 }
 
-export function totals(o: { type: string; fee: number; items: OrderItem[]; promoPct?: number; promoFixed?: number }, st: Settings) {
+export function totals(o: { type: string; fee: number; items: OrderItem[]; promoPct?: number; promoFixed?: number; dealDiscount?: number; pointsUsed?: number }, st: Settings) {
   const subtotal = live(o.items).reduce((s, l) => s + l.unit * l.qty, 0);
   const service = o.type === 'hall' ? Math.round((subtotal * (st.servicePct || 0)) / 100) : 0;
   // a promo applied at checkout follows later changes: percent is recalculated, a fixed sum never exceeds the dishes
-  const discount = o.promoPct ? Math.round((subtotal * o.promoPct) / 100) : Math.min(o.promoFixed || 0, subtotal);
-  return { subtotal, service, discount, total: subtotal + service + (o.fee || 0) - discount };
+  const deal = Math.min(o.dealDiscount || 0, subtotal);
+  const discount = Math.min(subtotal - deal, o.promoPct ? Math.round(((subtotal - deal) * o.promoPct) / 100) : o.promoFixed || 0);
+  const points = Math.min(o.pointsUsed || 0, subtotal - deal - discount);
+  return { subtotal, service, discount, deal, points, total: subtotal + service + (o.fee || 0) - discount - deal - points };
+}
+
+/** Deals at the cash desk for takeaway and delivery checks (tables get none). */
+function posDeals(o: OrderRow, items: OrderItem[], st: Settings) {
+  if (o.source !== 'pos' || o.type === 'hall') return null;
+  const r = computeDeals(st, live(items).map((l) => ({ id: l.id, cat: l.cat || '', unit: l.unit, qty: l.qty, hh: l.hh })), { channel: 'pos' });
+  return { deals: r.applied, dealDiscount: r.discount };
 }
 
 export async function saveItems(o: OrderRow, items: OrderItem[], st: Settings, extra: Record<string, unknown> = {}) {
   items.forEach((l) => (l.sum = l.unit * l.qty));
-  const t = totals({ type: o.type, fee: o.fee, items, promoPct: o.promoPct, promoFixed: o.promoFixed }, st);
+  const pd = o.status === 'done' ? null : posDeals(o, items, st);
+  const dealDiscount = pd ? pd.dealDiscount : o.dealDiscount;
+  const t = totals({ type: o.type, fee: o.fee, items, promoPct: o.promoPct, promoFixed: o.promoFixed, dealDiscount, pointsUsed: (extra.points_used as number) ?? o.pointsUsed }, st);
+  if (pd) extra = { ...extra, deals: JSON.stringify(pd.deals), deal_discount: t.deal };
   const keys = Object.keys(extra);
   const sets = keys.map((k, i) => `${k} = $${i + 7}`).join(', ');
   const r = await q(
@@ -63,8 +79,16 @@ export async function afterChange(prev: OrderRow, next: OrderRow, st: Settings) 
   } catch (e) {
     console.error('stock', e);
   }
+  let earned = 0;
+  try {
+    if (next.status === 'done') earned = await settleOrder(next, st);
+    else if (prev.status === 'done') await unsettleOrder(next);
+  } catch (e) {
+    console.error('loyalty', e);
+  }
   try {
     await tellGuest(next, stageText(next, st.phone));
+    if (earned > 0) await tellGuest(next, next.lang === 'uz' ? `🎁 +${earned} ball hisobingizga tushdi. Keyingi buyurtmada ular bilan toʻlash mumkin.` : `🎁 +${earned} баллов на ваш счёт. Ими можно оплатить часть следующего заказа.`);
     if (next.source === 'site') await refreshOrderMessage(next);
   } catch (e) {
     console.error('afterChange', e);

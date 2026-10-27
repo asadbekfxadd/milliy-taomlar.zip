@@ -8,6 +8,7 @@ import { Reveal } from '@/components/Chrome';
 import '../store.css';
 import StoreHeader from '@/components/store/StoreHeader';
 import StoreFooter from '@/components/store/StoreFooter';
+import TelegramApp from '@/components/TelegramApp';
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [menu, settings] = await Promise.all([getMenu(), getSettings()]);
@@ -36,6 +37,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <StoreFooter s={settings} lang={lang} />
         </div>
         <Reveal />
+        <TelegramApp />
       </Providers>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
     </>

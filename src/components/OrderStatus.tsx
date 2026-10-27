@@ -59,7 +59,7 @@ function note(o: PublicOrder, t: T) {
 }
 
 export default function OrderStatus({ id, token }: { id: string; token: string }) {
-  const { settings: st, t } = useSite();
+  const { settings: st, t, lang } = useSite();
   const [o, setO] = useState<PublicOrder | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [perm, setPerm] = useState<string>('default');
@@ -248,6 +248,28 @@ export default function OrderStatus({ id, token }: { id: string; token: string }
                 <span className="num">
                   −{fmt(o.discount!)} {t('sum')}
                 </span>
+              </div>
+            )}
+            {(o.deals || []).map((d) => (
+              <div key={d.id}>
+                <span>{d.name}</span>
+                <span className="num">
+                  −{fmt(d.amount)} {t('sum')}
+                </span>
+              </div>
+            ))}
+            {(o.pointsUsed ?? 0) > 0 && (
+              <div>
+                <span>{lang === 'uz' ? 'Ballar bilan' : 'Баллами'}</span>
+                <span className="num">
+                  −{fmt(o.pointsUsed!)} {t('sum')}
+                </span>
+              </div>
+            )}
+            {(o.pointsEarned ?? 0) > 0 && (
+              <div>
+                <span>{lang === 'uz' ? 'Hisobingizga tushdi' : 'Начислено баллов'}</span>
+                <span className="num">+{fmt(o.pointsEarned!)}</span>
               </div>
             )}
             <div className="t">

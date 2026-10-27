@@ -6,7 +6,7 @@ import { STORY } from '@/lib/defaults';
 import { api, money, PageHead, usePanel } from './kit';
 
 /* Settings are one document; each page edits its own fields and sends only what changed. */
-function useSettingsDoc(initial: Settings) {
+export function useSettingsDoc(initial: Settings) {
   const [s, setS] = useState<Settings>(() => JSON.parse(JSON.stringify(initial)));
   const [changed, setChanged] = useState<Set<keyof Settings>>(new Set());
   const [busy, setBusy] = useState(false);

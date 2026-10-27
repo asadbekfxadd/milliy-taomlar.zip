@@ -105,6 +105,40 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier_id   text NOT NULL DEFAULT '
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS courier      text NOT NULL DEFAULT '';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS picked_at    timestamptz;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at timestamptz;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS deals          jsonb NOT NULL DEFAULT '[]';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS deal_discount  integer NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS points_used    integer NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS points_earned  integer NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS points_done    boolean NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS loyalty (
+  phone      text PRIMARY KEY,
+  points     integer NOT NULL DEFAULT 0,
+  earned     integer NOT NULL DEFAULT 0,
+  spent      integer NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS loyalty_tx (
+  id       serial PRIMARY KEY,
+  phone    text NOT NULL,
+  order_id text,
+  points   integer NOT NULL,
+  kind     text NOT NULL,
+  note     text NOT NULL DEFAULT '',
+  by_name  text NOT NULL DEFAULT '',
+  at       timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS loyalty_tx_phone_idx ON loyalty_tx (phone, at DESC);
+CREATE TABLE IF NOT EXISTS tg_users (
+  id         bigint PRIMARY KEY,
+  name       text NOT NULL DEFAULT '',
+  username   text NOT NULL DEFAULT '',
+  phone      text NOT NULL DEFAULT '',
+  lang       text NOT NULL DEFAULT 'uz',
+  blocked    boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS tg_users_phone_idx ON tg_users (phone);
 CREATE INDEX IF NOT EXISTS orders_phone_idx ON orders (phone) WHERE phone <> '';
 CREATE INDEX IF NOT EXISTS orders_paid_idx ON orders (paid_at) WHERE paid_at IS NOT NULL;
 CREATE TABLE IF NOT EXISTS employees (
@@ -228,6 +262,7 @@ export type OrderRow = {
   promo: string; promoPct: number; promoFixed: number; discount: number; lang: string;
   waiterId: string; tips: number; cashier: string; shiftId: number | null; cancelReason: string;
   courierId: string; courier: string; pickedAt: string | null; deliveredAt: string | null;
+  deals: { id: string; name: string; amount: number }[]; dealDiscount: number; pointsUsed: number; pointsEarned: number;
 };
 export const mapOrder = (r: any): OrderRow => ({
   id: r.id, no: r.no, token: r.token, status: r.status, type: r.type, zone: r.zone, fee: r.fee, address: r.address,
@@ -240,6 +275,7 @@ export const mapOrder = (r: any): OrderRow => ({
   promo: r.promo ?? '', promoPct: Number(r.promo_pct ?? 0), promoFixed: r.promo_fixed ?? 0, discount: r.discount ?? 0, lang: r.lang ?? 'ru',
   waiterId: r.waiter_id ?? '', tips: r.tips ?? 0, cashier: r.cashier ?? '', shiftId: r.shift_id ?? null, cancelReason: r.cancel_reason ?? '',
   courierId: r.courier_id ?? '', courier: r.courier ?? '', pickedAt: r.picked_at ? new Date(r.picked_at).toISOString() : null, deliveredAt: r.delivered_at ? new Date(r.delivered_at).toISOString() : null,
+  deals: r.deals ?? [], dealDiscount: r.deal_discount ?? 0, pointsUsed: r.points_used ?? 0, pointsEarned: r.points_earned ?? 0,
 });
 
 export async function getOrder(id: string) {

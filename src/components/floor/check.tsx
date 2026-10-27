@@ -70,7 +70,7 @@ export function Lines({
             )}
             {!l.sent && !l.void && !l.hold && l.course && l.course > 1 && <div className="pos-hold go">подача: {COURSE_RU[l.course]}</div>}
             <div className="sx-muted small">
-              {l.void ? `отменено: ${l.void.reason} · ${l.void.by}` : `${STATION_RU[l.station || 'kitchen']} · ${fmt(l.unit)}`}
+              {l.void ? `отменено: ${l.void.reason} · ${l.void.by}` : `${STATION_RU[l.station || 'kitchen']} · ${fmt(l.unit)}${l.hh ? ` (−${l.hh}%, было ${fmt(l.was || 0)})` : ''}`}
               {l.sent && !l.void && !['done', 'cancelled'].includes(o.status) && (
                 <>
                   {' · '}
@@ -123,6 +123,18 @@ export function Totals({ o }: { o: StaffOrder }) {
         <div>
           <span>Доставка</span>
           <span className="num">{fmt(o.fee)}</span>
+        </div>
+      )}
+      {(o.deals || []).map((d) => (
+        <div key={d.id}>
+          <span>{d.name}</span>
+          <span className="num">−{fmt(d.amount)}</span>
+        </div>
+      ))}
+      {(o.pointsUsed ?? 0) > 0 && (
+        <div>
+          <span>Баллами</span>
+          <span className="num">−{fmt(o.pointsUsed!)}</span>
         </div>
       )}
       {(o.discount ?? 0) > 0 && (

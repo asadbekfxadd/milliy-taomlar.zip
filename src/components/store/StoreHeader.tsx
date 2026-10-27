@@ -35,7 +35,7 @@ export default function StoreHeader() {
   const [drawer, setDrawer] = useState(false);
   const [search, setSearch] = useState(false);
   const [table, setTable] = useState<number | null>(null);
-  const { subtotal } = useMemo(() => priceCart(menu, cart), [menu, cart]);
+  const { subtotal } = useMemo(() => priceCart(menu, cart, st), [menu, cart, st]);
 
   useEffect(() => {
     const f = () => setScrolled(scrollY > 8);
@@ -137,6 +137,7 @@ export default function StoreHeader() {
           <nav>
             <Link href="/">{L(lang, 'Menyu', 'Меню')}</Link>
             <Link href="/cart">{L(lang, 'Savat', 'Корзина')}</Link>
+            {((st.deals || []).some((d) => d.active && d.site) || (st.happyHours || []).some((h) => h.active) || st.loyalty?.enabled) && <Link href="/offers">{L(lang, 'Aksiyalar', 'Акции')}</Link>}
             {st.bookingEnabled !== false && <Link href="/book">{L(lang, 'Stol bron qilish', 'Бронь стола')}</Link>}
             <Link href="/contacts">{L(lang, 'Manzil va aloqa', 'Адрес и контакты')}</Link>
             <Link href="/story">{L(lang, 'Biz haqimizda', 'О нас')}</Link>

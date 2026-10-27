@@ -391,6 +391,7 @@ function PayModal({ o, onClose, onPay }: { o: StaffOrder; onClose: () => void; o
           {hasHeld && <div className="sx-muted small">Блюда, которые ещё не поданы, оплатить можно после подачи.</div>}
         </div>
       )}
+      {!split && <GuestPoints o={o} />}
       <div className="pay-total num">{fmt(due)} сум</div>
       <div className="pay-lines">
         <div>
@@ -451,6 +452,55 @@ function PayModal({ o, onClose, onPay }: { o: StaffOrder; onClose: () => void; o
         Фискальный чек выбивается на вашей онлайн-кассе.
       </p>
     </Modal>
+  );
+}
+
+/** Guest's phone at the till: points are earned on it, and part of the check can be paid with them. */
+function GuestPoints({ o }: { o: StaffOrder }) {
+  const { act, toast, settings } = useStaff();
+  const [phone, setPhone] = useState(o.phone ? prettyPhone(o.phone) : '');
+  const [info, setInfo] = useState<{ name: string; points: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (!settings.loyalty?.enabled) return null;
+  const find = async () => {
+    setBusy(true);
+    try {
+      const j = await api(`/api/staff/loyalty?phone=${encodeURIComponent(phone)}`);
+      setInfo({ name: j.name, points: j.points });
+      if (o.phone !== j.phone) await act(o.id, { action: 'points', phone, points: 0 });
+    } catch (e: any) {
+      toast(e.message);
+    }
+    setBusy(false);
+  };
+  const cap = Math.floor(((o.subtotal - (o.dealDiscount || 0) - (o.discount || 0)) * (settings.loyalty?.maxRedeemPct || 0)) / 100);
+  const can = info ? Math.min(info.points, cap) : 0;
+  return (
+    <div className="pay-pts">
+      <div className="sx-row">
+        <input className="sx-input" inputMode="tel" placeholder="Телефон гостя для баллов" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && find()} />
+        <button className="sx-btn" disabled={busy || phone.replace(/\D/g, '').length < 9} onClick={find}>
+          Найти
+        </button>
+      </div>
+      {info && (
+        <div className="sx-row" style={{ justifyContent: 'space-between' }}>
+          <span className="small">
+            {info.name || 'Новый гость'} · на счету <b className="num">{fmt(info.points)}</b> баллов
+          </span>
+          {(o.pointsUsed ?? 0) > 0 ? (
+            <button className="sx-link" disabled={busy} onClick={() => act(o.id, { action: 'points', phone, points: 0 })}>
+              не списывать
+            </button>
+          ) : can > 0 ? (
+            <button className="sx-btn sm primary" disabled={busy} onClick={async () => (await act(o.id, { action: 'points', phone, points: can })) && toast(`Списано ${fmt(can)} баллов`)}>
+              Списать {fmt(can)}
+            </button>
+          ) : null}
+        </div>
+      )}
+      {!info && <div className="sx-muted small">Баллы начислятся на этот номер после оплаты.</div>}
+    </div>
   );
 }
 

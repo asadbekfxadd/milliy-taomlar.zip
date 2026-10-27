@@ -12,6 +12,9 @@ import { clientIp, limited, over, record } from '@/lib/rate';
 import { saveItems, sendToKitchen, stationOf } from '@/lib/pos';
 import type { OrderItem } from '@/lib/types';
 import { checkoutUrl, isOnline, providers } from '@/lib/payments';
+import { computeDeals, happyPct, happyPrice, maxRedeem } from '@/lib/offers';
+import { balance, cfgOf } from '@/lib/loyalty';
+import { getTgUser, upsertTgUser, verifyInitData } from '@/lib/tgapp';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,9 +93,11 @@ export async function POST(req: Request) {
     if (d.sizes.length ? i.si >= d.sizes.length : i.si !== 0) return err('Неверный размер порции. Обновите корзину.');
     const ex = [...new Set(i.ex)];
     if (ex.some((x) => x >= d.extras.length)) return err('Неверная добавка. Обновите корзину.');
-    const unit = unitPrice(d, i.si, ex);
-    if (unit <= 0) return err(lang === 'uz' ? `«${d.name}» narxi hali aniqlanmagan. Telefon orqali buyurtma bering.` : `Цена «${d.name}» ещё уточняется. Закажите по телефону.`);
-    items.push({ id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: '', station: stationOf(menu, st, d.id), sent: false, ks: null as null, si: d.sizes.length ? i.si : undefined });
+    const full = unitPrice(d, i.si, ex);
+    const hh = happyPct(st, d.cat);
+    const unit = happyPrice(full, hh);
+    if (full <= 0) return err(lang === 'uz' ? `«${d.name}» narxi hali aniqlanmagan. Telefon orqali buyurtma bering.` : `Цена «${d.name}» ещё уточняется. Закажите по телефону.`);
+    items.push({ id: d.id, name: d.name, mods: modsOf(d, i.si, ex).join(', '), qty: i.qty, unit, sum: unit * i.qty, note: '', station: stationOf(menu, st, d.id), sent: false, ks: null as null, si: d.sizes.length ? i.si : undefined, cat: d.cat, ...(hh ? { hh, was: full } : {}) });
   }
   const subtotal = items.reduce((s, i) => s + i.sum, 0);
 
@@ -119,10 +124,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ id: check.id, token: check.token, no: check.no });
   }
 
+  // opened inside Telegram: the signed user links the order to their chat and may pay with points
+  const raw = body as { tg?: string; points?: number };
+  const tgu = verifyInitData(raw.tg);
+  const tgRow = tgu ? (await getTgUser(tgu.id)) || (await upsertTgUser(tgu)) : null;
+
+  // promotions without a code: the first order is recognised by the phone number
+  const prev = await q(`SELECT 1 FROM orders WHERE phone = $1 AND status <> 'cancelled' AND type <> 'hall' LIMIT 1`, [phone]);
+  const deals = computeDeals(st, items.map((l) => ({ id: l.id, cat: l.cat, unit: l.unit, qty: l.qty, hh: l.hh })), { channel: 'site', first: !prev.rows[0] });
+
   // promo: checked again here; the browser only sends the code
   const promo = o.promo ? findPromo(st, o.promo) : null;
   if (o.promo && !promo) return err('Такого промокода нет или он больше не действует');
-  const discount = promoDiscount(promo, subtotal);
+  if (promo && !deals.promoOk)
+    return err(lang === 'uz' ? `Promokod «${deals.applied[0]?.name}» aksiyasi bilan birga ishlamaydi` : `Промокод не суммируется с акцией «${deals.applied[0]?.name}»`, 'promo');
+  const discount = promoDiscount(promo, subtotal - deals.discount);
+
+  // points: only for a Telegram user whose phone Telegram confirmed and matches the order
+  let points = 0;
+  const want = Math.floor(Number(raw.points) || 0);
+  if (want > 0) {
+    if (!tgRow?.phone || tgRow.phone !== phone) return err(lang === 'uz' ? 'Ballar bilan toʻlash uchun Telegram orqali raqamingizni tasdiqlang' : 'Чтобы платить баллами, подтвердите номер в Telegram-боте', 'points');
+    points = Math.min(want, maxRedeem(cfgOf(st), subtotal - deals.discount - discount, await balance(phone)));
+  }
 
   let fee = 0,
     zone = '';
@@ -136,12 +160,13 @@ export async function POST(req: Request) {
   }
 
   const r = await q(
-    `INSERT INTO orders (id, token, type, zone, fee, address, name, phone, note, "when", pay, items, subtotal, total, pay_status, promo, promo_pct, promo_fixed, discount, lang)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`,
+    `INSERT INTO orders (id, token, type, zone, fee, address, name, phone, note, "when", pay, items, subtotal, total, pay_status, promo, promo_pct, promo_fixed, discount, lang, deals, deal_discount, points_used, customer_chat)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24) RETURNING *`,
     [
       newId(), randomBytes(16).toString('hex'), o.type, zone, fee, o.type === 'delivery' ? o.address : '', o.name, phone, o.note, o.when, o.pay,
-      JSON.stringify(items), subtotal, subtotal + fee - discount, online ? 'pending' : 'unpaid',
+      JSON.stringify(items), subtotal, subtotal + fee - discount - deals.discount - points, online ? 'pending' : 'unpaid',
       discount ? promo!.code : '', discount && promo!.pct > 0 ? promo!.pct : 0, discount && !(promo!.pct > 0) ? promo!.fixed : 0, discount, lang,
+      JSON.stringify(deals.applied), deals.discount, points, tgRow && !tgRow.blocked ? tgRow.id : null,
     ],
   );
   let order = mapOrder(r.rows[0]);

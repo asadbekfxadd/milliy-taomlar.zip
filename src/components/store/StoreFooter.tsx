@@ -45,6 +45,7 @@ export default function StoreFooter({ s, lang }: { s: Settings; lang: Lang }) {
         <div>
           <h4>{L('Boʻlimlar', 'Разделы')}</h4>
           <Link href="/">{L('Menyu', 'Меню')}</Link>
+          {((s.deals || []).some((d) => d.active && d.site) || (s.happyHours || []).some((h) => h.active) || s.loyalty?.enabled) && <Link href="/offers">{L('Aksiyalar', 'Акции')}</Link>}
           {s.bookingEnabled !== false && <Link href="/book">{L('Stol bron qilish', 'Бронь стола')}</Link>}
           <Link href="/story">{L('Biz haqimizda', 'О нас')}</Link>
           <Link href="/contacts">{L('Aloqa', 'Контакты')}</Link>

@@ -76,6 +76,32 @@ export const menuSchema = z.object({
   v: z.number().int().optional(),
 });
 
+const hhmm = z.string().regex(/^([01]?\d|2[0-3]):[0-5]\d$/).or(z.literal('')).default('');
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal('')).optional().default('');
+const win = { days: z.array(z.number().int().min(0).max(6)).max(7).default([]), from: hhmm, to: hhmm, dateFrom: ymd, dateTo: ymd };
+const ids = z.array(str(64)).max(100).default([]);
+const happyHour = z.object({ id: str(40), name: str(80), pct: z.coerce.number().min(1).max(90), cats: ids, active: z.boolean().default(true), ...win });
+const deal = z.object({
+  id: str(40),
+  kind: z.enum(['nplus', 'set', 'tiers', 'first']),
+  name: str(80),
+  nameUz: str(80).optional().default(''),
+  active: z.boolean().default(true),
+  site: z.boolean().default(true),
+  pos: z.boolean().default(true),
+  withPromo: z.boolean().default(false),
+  withHappy: z.boolean().default(false),
+  cats: ids,
+  dishes: ids,
+  buy: z.coerce.number().int().min(1).max(20).default(2),
+  get: z.coerce.number().int().min(1).max(20).default(1),
+  pct: z.coerce.number().min(1).max(100).default(100),
+  setDishes: ids,
+  setPrice: money.default(0),
+  tiers: z.array(z.object({ from: money, pct: z.coerce.number().min(1).max(90) })).max(10).default([]),
+  ...win,
+});
+
 export const settingsSchema = z.object({
   name: str(80),
   tagline: str(200),
@@ -116,6 +142,12 @@ export const settingsSchema = z.object({
   printGuestChecks: z.boolean().default(false),
   bookingEnabled: z.boolean().default(true),
   bookingMaxGuests: z.coerce.number().int().min(1).max(200).default(20),
+  happyHours: z.array(happyHour).max(30).optional().default([]),
+  deals: z.array(deal).max(50).optional().default([]),
+  loyalty: z
+    .object({ enabled: z.boolean().default(false), earnPct: z.coerce.number().min(0).max(50).default(3), maxRedeemPct: z.coerce.number().min(0).max(100).default(30), welcome: money.default(0) })
+    .optional()
+    .default({ enabled: false, earnPct: 3, maxRedeemPct: 30, welcome: 0 }),
   catStations: z.record(z.string().max(64), z.enum(['kitchen', 'mangal', 'bar'])),
   paper: z.enum(['80', '58']),
 });

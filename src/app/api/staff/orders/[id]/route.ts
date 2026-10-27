@@ -4,11 +4,14 @@ import { randomBytes } from 'crypto';
 import { getOrder, mapOrder, newId, q } from '@/lib/db';
 import { getMenu, getSettings } from '@/lib/data';
 import { posAdd, posLineEdit, posPay } from '@/lib/schemas';
-import { adjustEta, kitchenMove, printCheck, priceLine, saveItems, sendToKitchen, updateStatus, voidLine } from '@/lib/pos';
+import { totals, adjustEta, kitchenMove, printCheck, priceLine, saveItems, sendToKitchen, updateStatus, voidLine } from '@/lib/pos';
 import { approverByPin } from '@/lib/employees';
 import { currentShift } from '@/lib/shifts';
 import { audit } from '@/lib/audit';
 import { can } from '@/lib/rbac';
+import { normalizePhone } from '@/lib/format';
+import { balance, cfgOf } from '@/lib/loyalty';
+import { maxRedeem } from '@/lib/offers';
 import type { OrderItem } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -118,6 +121,21 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       items[i].hold = c > 1;
       if (c === 1) delete items[i].course;
       return NextResponse.json(await saveItems(o, items, st));
+    }
+    case 'points': {
+      // the guest's phone for points; optionally pay part of the check with points
+      if (!cashier) return bad('Баллы оформляет кассир', 403);
+      const phone = normalizePhone(String(body?.phone || ''));
+      if (!phone) return bad('Телефон в формате +998 90 123 45 67');
+      if (o.phone && o.phone !== phone && o.source === 'site') return bad('У заказа с сайта уже есть номер гостя');
+      const cfg = cfgOf(st);
+      const want = Math.max(0, Math.floor(Number(body?.points) || 0));
+      const t = totals({ ...o, items, pointsUsed: 0 }, st);
+      const use = Math.min(want, maxRedeem(cfg, t.subtotal - t.deal - t.discount, await balance(phone)));
+      if (want && !use) return bad(cfg.enabled ? 'Баллов не хватает' : 'Баллы выключены: Управление → Акции → Баллы');
+      const r = await saveItems(o, items, st, { phone, points_used: use });
+      if (use) await audit(me, 'Оплата баллами', `чек № ${o.no}: ${money(use)} баллов, ${phone}`);
+      return NextResponse.json(r);
     }
     case 'paypart': {
       // the guest pays for part of the table: those portions become their own closed check

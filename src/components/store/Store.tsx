@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Dish } from '@/lib/types';
 import { basePrice, cartKey, portionLabel, priceCart } from '@/lib/pricing';
+import { happyPrice } from '@/lib/offers';
+import { useHappy } from './useHappy';
 import { fmt } from '@/lib/format';
 import { TAGS } from '@/lib/defaults';
 import { catName, unitText } from '@/lib/i18n';
@@ -19,7 +21,9 @@ const hasOptions = (d: Dish) => d.sizes.length > 1 || d.extras.length > 0;
 /* ---------- one product card ---------- */
 export function StoreCard({ d }: { d: Dish }) {
   const { lang, cart, add, setQty, openDish } = useSite();
-  const price = basePrice(d);
+  const hh = useHappy()(d.cat);
+  const full = basePrice(d);
+  const price = happyPrice(full, hh);
   const key = cartKey(d.id, 0, []);
   const inCart = cart.filter((i) => i.id === d.id).reduce((s, i) => s + i.qty, 0);
   const simple = !hasOptions(d);
@@ -33,7 +37,7 @@ export function StoreCard({ d }: { d: Dish }) {
   return (
     <article className={`s-card ${inCart ? 'in' : ''}`} data-fly onClick={() => openDish(d.id)}>
       <div className={`pic ${spin ? 'spin' + (spin % 2) : ''}`}>
-        {badge && <span className="tag">{TAGS[badge][lang as 'uz' | 'ru']}</span>}
+        {hh > 0 ? <span className="tag hh">−{hh}%</span> : badge && <span className="tag">{TAGS[badge][lang as 'uz' | 'ru']}</span>}
         <DishArt art={d.art} photo={d.photo} label={nameOf(d, lang)} sizes="(max-width: 860px) 50vw, 260px" />
       </div>
       <div className="info">
@@ -42,6 +46,7 @@ export function StoreCard({ d }: { d: Dish }) {
             {hasOptions(d) && d.sizes.length > 1 ? L(lang, 'dan ', 'от ') : ''}
             {fmt(price)}
             <small>{L(lang, 'soʻm', 'сум')}</small>
+            {hh > 0 && <s className="was">{fmt(full)}</s>}
           </span>
         ) : (
           <span className="price na">{L(lang, 'Narxi aniqlanmoqda', 'Цена уточняется')}</span>
@@ -319,7 +324,7 @@ function useCartSummary() {
   const [mode] = useMode(allowed);
   const [table, setTable] = useState<number | null>(null);
   useEffect(() => setTable(readTable()), []);
-  const { lines, subtotal } = useMemo(() => priceCart(menu, cart), [menu, cart]);
+  const { lines, subtotal } = useMemo(() => priceCart(menu, cart, st), [menu, cart, st]);
   const zones = st.zones || [];
   const minOrder = !table && mode === 'delivery' && zones.length ? Math.min(...zones.map((z) => +z.min)) : 0;
   return { lines, subtotal, minOrder, mode, table };

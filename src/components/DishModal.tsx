@@ -5,6 +5,8 @@ import DishArt from './DishArt';
 import { Badges } from './Dish';
 import { catName, dishAllergens, dishDesc, dishIngr, dishSub, extraLabel, sizeLabel, unitText } from '@/lib/i18n';
 import { portionLabel, unitPrice } from '@/lib/pricing';
+import { happyPrice } from '@/lib/offers';
+import { useHappy } from './store/useHappy';
 import { fmt } from '@/lib/format';
 
 export default function DishModal({ id, onClose }: { id: string; onClose: () => void }) {
@@ -43,9 +45,11 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
     };
   }, [onClose]);
 
+  const happy = useHappy();
   if (!d) return null;
   const cat = menu.cats.find((c) => c.id === d.cat);
-  const u = unitPrice(d, si, ex);
+  const hh = happy(d.cat);
+  const u = happyPrice(unitPrice(d, si, ex), hh);
 
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-labelledby="dlgT">
@@ -131,7 +135,7 @@ export default function DishModal({ id, onClose }: { id: string; onClose: () => 
             </div>
             <div>
               <b>{t('dish.unit')}</b>
-              <span className="num">{u > 0 ? `${fmt(u)} ${t('sum')}` : t('dish.noPrice')}</span>
+              <span className="num">{u > 0 ? `${fmt(u)} ${t('sum')}${hh ? ` (−${hh}%)` : ''}` : t('dish.noPrice')}</span>
             </div>
           </div>
 
