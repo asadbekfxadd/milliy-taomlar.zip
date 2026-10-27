@@ -29,29 +29,10 @@ export type Dish = {
 };
 export type Cat = { id: string; name: string; ru: string; theme?: string };
 export type ComboItem = { id: string; si: number; qty: number };
-export type Combo = {
-  id: string;
-  name: string;
-  ru: string;
-  descUz?: string;
-  desc?: string;
-  items: ComboItem[];
-  active?: boolean;
-};
-export type Menu = {
-  cats: Cat[];
-  dishes: Dish[];
-  combos?: Combo[];
-  v?: number;
-};
+export type Combo = { id: string; name: string; ru: string; descUz?: string; desc?: string; items: ComboItem[]; active?: boolean };
+export type Menu = { cats: Cat[]; dishes: Dish[]; combos?: Combo[]; v?: number };
 export type Zone = { name: string; fee: number; min: number; uz?: string };
-export type Promo = {
-  code: string;
-  pct: number;
-  fixed: number;
-  min: number;
-  active: boolean;
-};
+export type Promo = { code: string; pct: number; fixed: number; min: number; active: boolean };
 export type Settings = {
   name: string;
   tagline: string;
@@ -91,31 +72,16 @@ export type Settings = {
   deliveryMinutes: number;
   printGuestChecks: boolean;
   catStations: Record<string, string>;
-  paper: "80" | "58";
+  paper: '80' | '58';
   /* table booking from the site */
   bookingEnabled?: boolean;
   bookingMaxGuests?: number;
 };
-export type CartItem = {
-  key: string;
-  id: string;
-  si: number;
-  ex: number[];
-  qty: number;
-};
-export type KitchenState = "queued" | "cooking" | "ready";
+export type CartItem = { key: string; id: string; si: number; ex: number[]; qty: number };
+export type KitchenState = 'queued' | 'cooking' | 'ready';
 export type OrderItem = {
-  id: string;
-  name: string;
-  mods: string;
-  qty: number;
-  unit: number;
-  sum: number;
-  note?: string;
-  station?: string;
-  sent?: boolean;
-  ks?: KitchenState | null;
-  at?: number;
+  id: string; name: string; mods: string; qty: number; unit: number; sum: number;
+  note?: string; station?: string; sent?: boolean; ks?: KitchenState | null; at?: number;
   /** serving course: 1 now, 2 hot, 3 dessert; 2 and 3 wait ("hold") until the waiter fires them */
   course?: 1 | 2 | 3;
   hold?: boolean;
@@ -124,15 +90,14 @@ export type OrderItem = {
   /** cancelled after it went to the kitchen: kept on the check, struck through, not charged */
   void?: { by: string; reason: string; at: number };
 };
-export type OrderStatus =
-  "new" | "accepted" | "cooking" | "ready" | "done" | "cancelled";
+export type OrderStatus = 'new' | 'accepted' | 'cooking' | 'ready' | 'done' | 'cancelled';
 export type PublicOrder = {
   id: string;
   no: number;
   status: OrderStatus;
-  type: "pickup" | "delivery" | "hall";
+  type: 'pickup' | 'delivery' | 'hall';
   pay: string;
-  payStatus: "unpaid" | "pending" | "paid" | "failed" | "refunded";
+  payStatus: 'unpaid' | 'pending' | 'paid' | 'failed' | 'refunded';
   payUrl: string | null;
   etaAt: string | null;
   tgLink: string | null;

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 const str = (max: number) => z.string().trim().max(max);
 const money = z.coerce.number().int().min(0).max(100_000_000);
@@ -15,87 +15,59 @@ export const orderInput = z.object({
     )
     .min(1)
     .max(60),
-  type: z.enum(["pickup", "delivery", "hall"]),
+  type: z.enum(['pickup', 'delivery', 'hall']),
   table: z.number().int().min(1).max(500).optional(),
   zone: z.number().int().min(0).max(100).optional(),
-  address: str(300).optional().default(""),
-  name: str(80).default(""),
-  phone: str(40).default(""),
-  note: str(500).optional().default(""),
-  when: z.union([
-    z.literal("asap"),
-    z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-  ]),
-  pay: z.enum(["cash", "card", "payme", "click"]),
-  promo: z.string().trim().max(24).optional().default(""),
+  address: str(300).optional().default(''),
+  name: str(80).default(''),
+  phone: str(40).default(''),
+  note: str(500).optional().default(''),
+  when: z.union([z.literal('asap'), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/)]),
+  pay: z.enum(['cash', 'card', 'payme', 'click']),
+  promo: z.string().trim().max(24).optional().default(''),
   website: z.string().optional(), // honeypot, must stay empty
 });
 
-export const statusInput = z.object({
-  status: z.enum(["new", "accepted", "cooking", "ready", "done", "cancelled"]),
-});
+export const statusInput = z.object({ status: z.enum(['new', 'accepted', 'cooking', 'ready', 'done', 'cancelled']) });
 
-const size = z.object({
-  label: str(80),
-  uz: str(80).optional(),
-  w: str(40).default(""),
-  p: money,
-});
+const size = z.object({ label: str(80), uz: str(80).optional(), w: str(40).default(''), p: money });
 const extra = z.object({ label: str(80), uz: str(80).optional(), p: money });
 export const dishSchema = z.object({
   id: str(64).min(1),
   cat: str(64),
   name: str(120),
-  ru: str(160).default(""),
-  desc: str(1200).default(""),
-  descUz: str(1200).optional().default(""),
+  ru: str(160).default(''),
+  desc: str(1200).default(''),
+  descUz: str(1200).optional().default(''),
   ingr: z.array(str(80)).max(40).default([]),
   ingrUz: z.array(str(80)).max(40).optional().default([]),
   moods: z.array(str(20)).max(10).optional().default([]),
   skewer: z.boolean().optional().default(false),
   hidden: z.boolean().optional().default(false),
   allergens: z.array(str(60)).max(20).default([]),
-  weight: str(40).default(""),
+  weight: str(40).default(''),
   price: money,
   tags: z.array(str(20)).max(10).default([]),
-  art: str(40).default("plov"),
-  photo: str(500).default(""),
+  art: str(40).default('plov'),
+  photo: str(500).default(''),
   sizes: z.array(size).max(12).default([]),
   extras: z.array(extra).max(20).default([]),
   available: z.boolean().default(true),
   featured: z.boolean().default(false),
 });
 export const menuSchema = z.object({
-  cats: z
-    .array(
-      z.object({
-        id: str(64).min(1),
-        name: str(120),
-        ru: str(160).default(""),
-        theme: str(20).optional(),
-      }),
-    )
-    .max(40),
+  cats: z.array(z.object({ id: str(64).min(1), name: str(120), ru: str(160).default(''), theme: str(20).optional() })).max(40),
   dishes: z.array(dishSchema).max(400),
   combos: z
     .array(
       z.object({
         id: str(64).min(1),
         name: str(120),
-        ru: str(160).default(""),
-        descUz: str(400).optional().default(""),
-        desc: str(400).optional().default(""),
+        ru: str(160).default(''),
+        descUz: str(400).optional().default(''),
+        desc: str(400).optional().default(''),
         active: z.boolean().optional().default(true),
-        items: z
-          .array(
-            z.object({
-              id: str(64),
-              si: z.number().int().min(0).max(50).default(0),
-              qty: z.number().int().min(1).max(50).default(1),
-            }),
-          )
-          .min(1)
-          .max(20),
+        items: z.array(z.object({ id: str(64), si: z.number().int().min(0).max(50).default(0), qty: z.number().int().min(1).max(50).default(1) })).min(1).max(20),
       }),
     )
     .max(30)
@@ -108,68 +80,28 @@ export const settingsSchema = z.object({
   name: str(80),
   tagline: str(200),
   phone: str(40),
-  phone2: str(40).optional().default(""),
+  phone2: str(40).optional().default(''),
   address: str(200),
   city: str(80),
   hours: str(160),
-  mapUrl: z
-    .string()
-    .trim()
-    .max(500)
-    .refine((v) => !v || /^https:\/\//.test(v), "https only")
-    .default(""),
+  mapUrl: z.string().trim().max(500).refine((v) => !v || /^https:\/\//.test(v), 'https only').default(''),
   instagram: str(80),
   telegram: str(80),
   pickup: z.boolean(),
   delivery: z.boolean(),
   prepTime: str(60),
   minOrder: money,
-  zones: z
-    .array(
-      z.object({
-        name: str(120),
-        uz: str(120).optional().default(""),
-        fee: money,
-        min: money,
-      }),
-    )
-    .max(30),
-  taglineUz: str(200).optional().default(""),
-  cityUz: str(80).optional().default(""),
-  addressUz: str(200).optional().default(""),
-  hoursUz: str(160).optional().default(""),
-  openFrom: z
-    .string()
-    .regex(/^([01]?\d|2[0-3]):[0-5]\d$/)
-    .or(z.literal(""))
-    .optional()
-    .default(""),
-  openTo: z
-    .string()
-    .regex(/^([01]?\d|2[0-4]):[0-5]\d$/)
-    .or(z.literal(""))
-    .optional()
-    .default(""),
-  closedDays: z
-    .array(z.number().int().min(0).max(6))
-    .max(7)
-    .optional()
-    .default([]),
+  zones: z.array(z.object({ name: str(120), uz: str(120).optional().default(''), fee: money, min: money })).max(30),
+  taglineUz: str(200).optional().default(''),
+  cityUz: str(80).optional().default(''),
+  addressUz: str(200).optional().default(''),
+  hoursUz: str(160).optional().default(''),
+  openFrom: z.string().regex(/^([01]?\d|2[0-3]):[0-5]\d$/).or(z.literal('')).optional().default(''),
+  openTo: z.string().regex(/^([01]?\d|2[0-4]):[0-5]\d$/).or(z.literal('')).optional().default(''),
+  closedDays: z.array(z.number().int().min(0).max(6)).max(7).optional().default([]),
   ordersPaused: z.boolean().optional().default(false),
   promos: z
-    .array(
-      z.object({
-        code: z
-          .string()
-          .trim()
-          .toUpperCase()
-          .regex(/^[A-Z0-9_-]{3,24}$/),
-        pct: z.coerce.number().min(0).max(90).default(0),
-        fixed: money.default(0),
-        min: money.default(0),
-        active: z.boolean().default(true),
-      }),
-    )
+    .array(z.object({ code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,24}$/), pct: z.coerce.number().min(0).max(90).default(0), fixed: money.default(0), min: money.default(0), active: z.boolean().default(true) }))
     .max(50)
     .optional()
     .default([]),
@@ -184,11 +116,8 @@ export const settingsSchema = z.object({
   printGuestChecks: z.boolean().default(false),
   bookingEnabled: z.boolean().default(true),
   bookingMaxGuests: z.coerce.number().int().min(1).max(200).default(20),
-  catStations: z.record(
-    z.string().max(64),
-    z.enum(["kitchen", "mangal", "bar"]),
-  ),
-  paper: z.enum(["80", "58"]),
+  catStations: z.record(z.string().max(64), z.enum(['kitchen', 'mangal', 'bar'])),
+  paper: z.enum(['80', '58']),
 });
 
 const posLine = z.object({
@@ -196,24 +125,11 @@ const posLine = z.object({
   si: z.number().int().min(0).max(50).default(0),
   ex: z.array(z.number().int().min(0).max(50)).max(20).default([]),
   qty: z.number().int().min(1).max(99).default(1),
-  note: str(200).optional().default(""),
+  note: str(200).optional().default(''),
   course: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
 });
-export const posCreate = z.object({
-  table: z.number().int().min(0).max(500).nullable(),
-  guests: z.number().int().min(0).max(100).default(0),
-  waiter: str(60).default(""),
-  type: z.enum(["hall", "pickup"]).default("hall"),
-});
+export const posCreate = z.object({ table: z.number().int().min(0).max(500).nullable(), guests: z.number().int().min(0).max(100).default(0), waiter: str(60).default(''), type: z.enum(['hall', 'pickup']).default('hall') });
 export const posAdd = z.object({ items: z.array(posLine).min(1).max(40) });
-export const posLineEdit = z.object({
-  line: z.number().int().min(0).max(500),
-  qty: z.number().int().min(0).max(99),
-});
-export const posPay = z.object({
-  method: z.enum(["cash", "card", "payme", "click"]),
-});
-export const kitchenUpdate = z.object({
-  lines: z.array(z.number().int().min(0).max(500)).max(100),
-  to: z.enum(["cooking", "ready"]),
-});
+export const posLineEdit = z.object({ line: z.number().int().min(0).max(500), qty: z.number().int().min(0).max(99) });
+export const posPay = z.object({ method: z.enum(['cash', 'card', 'payme', 'click']) });
+export const kitchenUpdate = z.object({ lines: z.array(z.number().int().min(0).max(500)).max(100), to: z.enum(['cooking', 'ready']) });
