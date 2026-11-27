@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import { getOrder, q } from '@/lib/db';
 import { getSettings } from '@/lib/data';
 import { markPaid } from '@/lib/pos';
@@ -9,6 +9,7 @@ import { markPaid } from '@/lib/pos';
 export const dynamic = 'force-dynamic';
 
 const md5 = (s: string) => createHash('md5').update(s).digest('hex');
+const safeEq = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 async function readBody(req: Request): Promise<Record<string, string>> {
   const type = req.headers.get('content-type') || '';
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     action === '0'
       ? md5(p.click_trans_id + p.service_id + secret + p.merchant_trans_id + p.amount + p.action + p.sign_time)
       : md5(p.click_trans_id + p.service_id + secret + p.merchant_trans_id + (p.merchant_prepare_id || '') + p.amount + p.action + p.sign_time);
-  if (sign !== p.sign_string) return out({}, -1, 'SIGN CHECK FAILED!');
+  if (!safeEq(sign, p.sign_string)) return out({}, -1, 'SIGN CHECK FAILED!');
 
   const o = /^[a-f0-9]{24}$/.test(p.merchant_trans_id) ? await getOrder(p.merchant_trans_id) : null;
   if (!o || o.pay !== 'click') return out({}, -5, 'Order not found');

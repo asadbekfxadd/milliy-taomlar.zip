@@ -16,8 +16,13 @@ export function limited(key: string, max: number, windowMs: number) {
   return false;
 }
 
+/** Первый адрес в X-Forwarded-For присылает сам клиент, его можно подделать и обойти лимит попыток входа.
+    Берём адрес, который дописал прокси Railway: X-Real-IP, а если его нет, последний в цепочке. */
 export function clientIp(req: Request) {
-  return (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || 'unknown';
+  const real = (req.headers.get('x-real-ip') || '').trim();
+  if (real) return real;
+  const chain = (req.headers.get('x-forwarded-for') || '').split(',').map((x) => x.trim()).filter(Boolean);
+  return chain[chain.length - 1] || 'unknown';
 }
 
 /** Like `limited`, but only checks; call `record` after the action really happened. */

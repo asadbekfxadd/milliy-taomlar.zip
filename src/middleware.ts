@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
+  // оптимизатор картинок Next не нужен (next/image не используется), а на нём держатся уязвимости Next 14: закрываем адрес
+  if (req.nextUrl.pathname === '/_next/image') return new NextResponse('Not found', { status: 404 });
   // staff area: pass the path on, so a sign-in redirect can come back to the same page
   if (/^\/(admin|pos|waiter|kitchen|print|courier|dispatch)(\/|$)/.test(req.nextUrl.pathname)) {
     const h = new Headers(req.headers);
@@ -17,4 +19,4 @@ export function middleware(req: NextRequest) {
   return res;
 }
 
-export const config = { matcher: ['/((?!api|_next|art|staff|.*\\..*).*)'] };
+export const config = { matcher: ['/_next/image', '/((?!api|_next|art|staff|.*\\..*).*)'] };

@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // next/image не используется: отключаем оптимизатор /_next/image (на нём держится часть уязвимостей Next 14)
+  images: { unoptimized: true },
   experimental: {
     serverComponentsExternalPackages: ['sharp', 'pg'],
   },

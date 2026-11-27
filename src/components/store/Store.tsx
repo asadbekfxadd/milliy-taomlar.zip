@@ -127,6 +127,7 @@ export default function Store() {
 
   return (
     <>
+      <h1 className="sr">{L(lang, `${st.name} — milliy taomlar, Yangiyoʻlda yetkazib berish`, `${st.name} — национальная кухня с доставкой в Янгиюле`)}</h1>
       <div className="s-wrap">
         <div className="s-stories">
           {cats.map(({ c, ds }) => {
