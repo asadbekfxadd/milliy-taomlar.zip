@@ -12,13 +12,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   if (!/^[a-f0-9]{24}$/.test(params.id)) return new Response('Not found', { status: 404 });
   const w = Number(new URL(req.url).searchParams.get('w')) || 0;
   const key = params.id + ':' + w;
-  let body = cache.get(key);
+  let body: Buffer | undefined = cache.get(key);
   if (!body) {
     const img = (await q('SELECT data, width FROM images WHERE id = $1', [params.id])).rows[0];
     if (!img) return new Response('Not found', { status: 404 });
-    body = WIDTHS.has(w) && img.width > w ? await sharp(img.data).resize({ width: w }).webp({ quality: 80 }).toBuffer() : (img.data as Buffer);
-    cache.set(key, body);
+    const out: Buffer = WIDTHS.has(w) && img.width > w ? await sharp(img.data).resize({ width: w }).webp({ quality: 80 }).toBuffer() : (img.data as Buffer);
+    body = out;
+    cache.set(key, out);
     if (cache.size > 300) cache.delete(cache.keys().next().value as string);
   }
-  return new Response(body, { headers: { 'content-type': 'image/webp', 'cache-control': 'public, max-age=31536000, immutable' } });
+  return new Response(new Uint8Array(body), { headers: { 'content-type': 'image/webp', 'cache-control': 'public, max-age=31536000, immutable' } });
 }
